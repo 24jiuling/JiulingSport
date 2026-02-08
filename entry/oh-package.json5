@@ -1,0 +1,20 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "lib_entity": "file:../common/lib_entity",
+    "lib_api": "file:../common/lib_api",
+    "appscopecommon": "file:../AppScopeCommon",
+    "lib_router": "file:../common/lib_router",
+    "feature_video": "file:../feature/feature_video",
+    "feature_training": "file:../feature/feature_training",
+    "feature_sport": "file:../feature/feature_sport",
+    "feature_medal": "file:../feature/feature_medal",
+    "feature_log": "file:../feature/feature_log"
+  }
+}
+

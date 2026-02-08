@@ -1,0 +1,11 @@
+{
+  "module": {
+    "name": "feature_log",
+    "type": "har",
+    "deviceTypes": [
+      "default",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

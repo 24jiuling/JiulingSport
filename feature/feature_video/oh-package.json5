@@ -1,0 +1,12 @@
+{
+  "name": "feature_video",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "lib_router": "file:../../common/lib_router",
+    "appscopecommon": "file:../../AppScopeCommon"
+  }
+}

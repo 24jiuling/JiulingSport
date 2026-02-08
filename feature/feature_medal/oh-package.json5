@@ -1,0 +1,14 @@
+{
+  "name": "feature_medal",
+  "version": "1.0.0",
+  "description": "成就徽章系统模块",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "lib_entity": "file:../../common/lib_entity",
+    "lib_api": "file:../../common/lib_api",
+    "lib_router": "file:../../common/lib_router",
+    "appscopecommon": "file:../../AppScopeCommon"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "app": {
+    "signingConfigs": [],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "6.0.2(22)",
+        "compatibleSdkVersion": "5.1.1(19)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AppScopeCommon",
+      "srcPath": "./AppScopeCommon",
+    },
+    {
+      "name": "lib_entity",
+      "srcPath": "./common/lib_entity",
+    },
+    {
+      "name": "lib_router",
+      "srcPath": "./common/lib_router"
+    },
+    {
+      "name": "lib_api",
+      "srcPath": "./common/lib_api",
+    },
+    {
+      "name": "lib_http",
+      "srcPath": "./common/lib_http",
+    },
+    {
+      "name": "feature_log",
+      "srcPath": "./feature/feature_log",
+    },
+    {
+      "name": "feature_video",
+      "srcPath": "./feature/feature_video",
+    },
+    {
+      "name": "feature_training",
+      "srcPath": "./feature/feature_training",
+    },
+    {
+      "name": "feature_sport",
+      "srcPath": "./feature/feature_sport",
+    },
+    {
+      "name": "feature_medal",
+      "srcPath": "./feature/feature_medal",
+    }
+  ]
+}
