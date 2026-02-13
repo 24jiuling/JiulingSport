@@ -1,14 +1,14 @@
 import { Home } from './Home';
 import { CourseList } from './CourseList';
 import { Mine } from './Mine';
-import { LoginPage } from './LoginPage';
 import { GoalSettingPage } from './GoalSettingPage';
 import { RouterManager, RouterKey } from 'lib_router';
 import { VideoPlayerPage, VideoParam } from 'feature_video';
 import { TrainingPlanListPage, PlanDetailPage, CreatePlanPage, TrainingParam } from 'feature_training';
 import { ActiveTrainingPage, ManualRecordPage, SportParam } from 'feature_sport';
 import { BadgeGalleryPage } from 'feature_medal';
-import { ExerciseHistoryPage } from 'feature_log';
+import { ExerciseHistoryPage, LoginPage, SilentLoginHelper } from 'feature_log';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 
 @Entry
@@ -17,6 +17,17 @@ struct Index {
   @State currentIndex: number = 0;
   private controller: TabsController = new TabsController();
   private router: RouterManager = RouterManager.getInstance();
+
+  aboutToAppear(): void {
+    // 应用启动时尝试静默登录 — 如果华为账号已登录过，自动恢复登录状态
+    SilentLoginHelper.trySilentLogin().then((success: boolean) => {
+      if (success) {
+        hilog.info(0x0000, 'Index', 'Silent login succeeded, user is logged in.');
+      } else {
+        hilog.info(0x0000, 'Index', 'Silent login skipped or failed, user can login manually.');
+      }
+    });
+  }
 
   @Builder TabBuilder(title: ResourceStr, index: number) {
     Column() {

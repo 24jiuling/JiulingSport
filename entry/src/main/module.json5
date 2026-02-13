@@ -4,11 +4,7 @@
     "type": "entry",
     "description": "$string:module_desc",
     "mainElement": "EntryAbility",
-    "deviceTypes": [
-      "phone",
-      "tablet",
-      "2in1"
-    ],
+    "deviceTypes": ["phone", "tablet", "2in1"],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
@@ -22,17 +18,44 @@
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "metadata": [
+          {
+            "name": "client_id",
+            "value": "6917597094078837893"
+          }
+        ],
         "skills": [
           {
-            "entities": [
-              "entity.system.home"
-            ],
-            "actions": [
-              "ohos.want.action.home"
-            ]
+            "entities": ["entity.system.home"],
+            "actions": ["ohos.want.action.home"]
           }
         ]
       }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "usedScene": { "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO",
+        "usedScene": { "when": "inuse" }
+      },
+
+      // Sensor Permissions
+      {
+        "name": "ohos.permission.ACCELEROMETER",
+        "usedScene": { "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.GYROSCOPE",
+        "usedScene": { "when": "inuse" }
+      },
+      // Background Permissions
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "usedScene": { "when": "inuse" }
+      },
     ],
     "extensionAbilities": [
       {
@@ -45,7 +68,7 @@
             "name": "ohos.extension.backup",
             "resource": "$profile:backup_config"
           }
-        ],
+        ]
       }
     ]
   }

@@ -8,11 +8,16 @@ export struct Mine {
   @State user: User | null = null;
   @State badges: Badge[] = [];
   @State isLoggedIn: boolean = false;
+  @StorageProp('userLoginState') @Watch('onLoginStateChange') loginState: number = 0;
   private service: FitnessService = FitnessService.getInstance();
   private userService: UserService = UserService.getInstance();
   private router: RouterManager = RouterManager.getInstance();
 
   aboutToAppear() {
+    this.refreshData();
+  }
+
+  onLoginStateChange(): void {
     this.refreshData();
   }
 
@@ -28,12 +33,12 @@ export struct Mine {
 
   build() {
     Column({ space: 0 }) {
-      if (this.isLoggedIn && this.user !== null) {
-        // ========== 已登录视图 ==========
-        Scroll() {
-          Column({ space: 16 }) {
-            // 用户头部
-            Column() {
+      Scroll() {
+        Column({ space: 16 }) {
+          // ========== 用户头部 ==========
+          Column() {
+            if (this.isLoggedIn && this.user !== null) {
+              // 已登录：显示用户信息
               Row({ space: 16 }) {
                 Circle({ width: 72, height: 72 }).fill($r('app.color.placeholder_bg'))
                 Column({ space: 5 }) {
@@ -51,110 +56,143 @@ export struct Mine {
                     .borderRadius(10).backgroundColor('#40FFFFFF')
                   }
                 }.alignItems(HorizontalAlign.Start)
-              }.padding({ left: 24, right: 24, top: 20, bottom: 20 })
+              }.padding({ left: 24, right: 24, top: 20, bottom: 12 })
 
-              // 连续打卡
-              if (this.user.consecutiveDays > 0) {
-                Row({ space: 4 }) {
-                  Text('🔥 ' + this.user.consecutiveDays.toString() + '天连续打卡')
-                    .fontSize(13).fontColor($r('app.color.text_white'))
-                }.padding({ left: 24, bottom: 16 })
-              }
-            }.width('100%').backgroundColor($r('app.color.primary_blue'))
-
-            // 统计数据卡片
-            Row() {
-              Column() {
-                Text(this.user.totalWorkouts.toString())
-                  .fontSize(24).fontWeight(FontWeight.Bold)
-                Text($r('app.string.stat_workouts'))
-                  .fontSize(13).fontColor($r('app.color.text_gray'))
-              }.layoutWeight(1)
-              Column() {
-                Text(this.user.totalTime.toString())
-                  .fontSize(24).fontWeight(FontWeight.Bold)
-                Text($r('app.string.stat_minutes'))
-                  .fontSize(13).fontColor($r('app.color.text_gray'))
-              }.layoutWeight(1)
-              Column() {
-                Text(this.user.totalCalories.toString())
-                  .fontSize(24).fontWeight(FontWeight.Bold)
-                Text($r('app.string.stat_kcal'))
-                  .fontSize(13).fontColor($r('app.color.text_gray'))
-              }.layoutWeight(1)
-            }
-            .padding(20).backgroundColor(Color.White)
-            .margin({ left: 16, right: 16, top: -20 })
-            .borderRadius(16)
-            .shadow({ radius: 8, color: $r('app.color.shadow_color_dark'), offsetY: 4 })
-
-            // 打卡按钮
-            if (!this.userService.isTodayCheckedIn()) {
-              Button($r('app.string.check_in_btn'))
-                .width('90%').height(44)
-                .onClick(() => {
-                  this.userService.checkIn();
-                  this.refreshData();
-                  AlertDialog.show({ message: '打卡成功！' });
-                })
+              // 同步状态
+              Row({ space: 4 }) {
+                Text('✅').fontSize(12)
+                Text($r('app.string.sync_enabled_hint'))
+                  .fontSize(12).fontColor($r('app.color.plan_text_secondary'))
+              }.padding({ left: 24, bottom: 16 })
             } else {
+              // 未登录：显示本地模式头部 + 登录入口
+              Row({ space: 16 }) {
+                Circle({ width: 72, height: 72 }).fill($r('app.color.placeholder_bg'))
+                Column({ space: 6 }) {
+                  Text($r('app.string.local_mode_title'))
+                    .fontSize(22).fontWeight(FontWeight.Bold).fontColor($r('app.color.text_white'))
+                  Text($r('app.string.local_mode_hint'))
+                    .fontSize(12).fontColor($r('app.color.plan_text_secondary'))
+                    .maxLines(2)
+                }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+              }.padding({ left: 24, right: 24, top: 20, bottom: 12 })
+
+              // 登录按钮
               Row() {
-                Text('✅').fontSize(16)
-                Text($r('app.string.already_checked_in'))
-                  .fontSize(14).fontColor($r('app.color.primary_blue')).margin({ left: 8 })
-              }.width('90%').padding(12).justifyContent(FlexAlign.Center)
-              .backgroundColor($r('app.color.status_ongoing_bg')).borderRadius(12)
+                Button($r('app.string.login_register_btn'))
+                  .height(36).fontSize(14)
+                  .backgroundColor('#40FFFFFF').fontColor($r('app.color.text_white'))
+                  .onClick(() => { this.router.push(RouterKey.LOGIN); })
+              }.padding({ left: 24, right: 24, bottom: 16 })
             }
 
-            // 徽章成就
-            Column({ space: 8 }) {
-              Row() {
-                Text($r('app.string.achievements_title'))
-                  .fontSize(16).fontWeight(FontWeight.Bold).layoutWeight(1)
-                Text($r('app.string.view_all_text'))
-                  .fontSize(12).fontColor($r('app.color.primary_blue'))
-                  .onClick(() => { this.router.push(RouterKey.BADGE_GALLERY); })
-              }.width('100%').padding({ left: 16, right: 16 })
-
-              List({ space: 10 }) {
-                ForEach(this.badges, (badge: Badge) => {
-                  ListItem() {
-                    Column({ space: 3 }) {
-                      Circle({ width: 44, height: 44 })
-                        .fill(badge.isUnlocked ? $r('app.color.badge_unlocked') : $r('app.color.badge_locked'))
-                      Text(badge.name).fontSize(10).maxLines(1)
-                        .fontColor(badge.isUnlocked ? $r('app.color.text_black') : $r('app.color.text_light_gray'))
-                    }.width(70)
-                  }
-                })
-              }.listDirection(Axis.Horizontal).width('100%').height(80).padding({ left: 16 })
+            // 连续打卡（已登录且有打卡记录）
+            if (this.isLoggedIn && this.user !== null && this.user.consecutiveDays > 0) {
+              Row({ space: 4 }) {
+                Text('🔥 ' + this.user.consecutiveDays.toString() + '天连续打卡')
+                  .fontSize(13).fontColor($r('app.color.text_white'))
+              }.padding({ left: 24, bottom: 16 })
             }
-            .backgroundColor(Color.White).margin({ left: 16, right: 16 }).borderRadius(12)
-            .padding({ top: 12, bottom: 10 })
+          }.width('100%').backgroundColor($r('app.color.primary_blue'))
 
-            // 功能菜单
-            Column({ space: 1 }) {
-              this.MenuItem($r('app.string.menu_my_plans'), () => {
-                this.router.push(RouterKey.TRAINING_PLAN_LIST);
-              })
-              this.MenuItem($r('app.string.menu_history'), () => {
-                this.router.push(RouterKey.EXERCISE_HISTORY);
-              })
-              this.MenuItem($r('app.string.menu_manual_record'), () => {
-                this.router.push(RouterKey.MANUAL_RECORD);
-              })
-              this.MenuItem($r('app.string.menu_goal_setting'), () => {
-                this.router.push(RouterKey.GOAL_SETTING);
-              })
-              this.MenuItem($r('app.string.menu_multi_device'), () => {
-                AlertDialog.show({ message: '多端同步功能：在其他设备上登录同一账号即可同步训练数据' });
-              })
-              this.MenuItem($r('app.string.menu_settings'), () => {
-                // 设置页面占位
-              })
-            }.width('90%').backgroundColor(Color.White).borderRadius(12)
+          // ========== 统计数据卡片 ==========
+          Row() {
+            Column() {
+              Text(this.user !== null ? this.user.totalWorkouts.toString() : '0')
+                .fontSize(24).fontWeight(FontWeight.Bold)
+              Text($r('app.string.stat_workouts'))
+                .fontSize(13).fontColor($r('app.color.text_gray'))
+            }.layoutWeight(1)
+            Column() {
+              Text(this.user !== null ? this.user.totalTime.toString() : '0')
+                .fontSize(24).fontWeight(FontWeight.Bold)
+              Text($r('app.string.stat_minutes'))
+                .fontSize(13).fontColor($r('app.color.text_gray'))
+            }.layoutWeight(1)
+            Column() {
+              Text(this.user !== null ? this.user.totalCalories.toString() : '0')
+                .fontSize(24).fontWeight(FontWeight.Bold)
+              Text($r('app.string.stat_kcal'))
+                .fontSize(13).fontColor($r('app.color.text_gray'))
+            }.layoutWeight(1)
+          }
+          .padding(20).backgroundColor(Color.White)
+          .margin({ left: 16, right: 16, top: -20 })
+          .borderRadius(16)
+          .shadow({ radius: 8, color: $r('app.color.shadow_color_dark'), offsetY: 4 })
 
-            // 退出登录
+          // ========== 打卡按钮 ==========
+          if (!this.userService.isTodayCheckedIn()) {
+            Button($r('app.string.check_in_btn'))
+              .width('90%').height(44)
+              .onClick(() => {
+                this.userService.checkIn();
+                this.refreshData();
+                AlertDialog.show({ message: '打卡成功！' });
+              })
+          } else {
+            Row() {
+              Text('✅').fontSize(16)
+              Text($r('app.string.already_checked_in'))
+                .fontSize(14).fontColor($r('app.color.primary_blue')).margin({ left: 8 })
+            }.width('90%').padding(12).justifyContent(FlexAlign.Center)
+            .backgroundColor($r('app.color.status_ongoing_bg')).borderRadius(12)
+          }
+
+          // ========== 徽章成就 ==========
+          Column({ space: 8 }) {
+            Row() {
+              Text($r('app.string.achievements_title'))
+                .fontSize(16).fontWeight(FontWeight.Bold).layoutWeight(1)
+              Text($r('app.string.view_all_text'))
+                .fontSize(12).fontColor($r('app.color.primary_blue'))
+                .onClick(() => { this.router.push(RouterKey.BADGE_GALLERY); })
+            }.width('100%').padding({ left: 16, right: 16 })
+
+            List({ space: 10 }) {
+              ForEach(this.badges, (badge: Badge) => {
+                ListItem() {
+                  Column({ space: 3 }) {
+                    Circle({ width: 44, height: 44 })
+                      .fill(badge.isUnlocked ? $r('app.color.badge_unlocked') : $r('app.color.badge_locked'))
+                    Text(badge.name).fontSize(10).maxLines(1)
+                      .fontColor(badge.isUnlocked ? $r('app.color.text_black') : $r('app.color.text_light_gray'))
+                  }.width(70)
+                }
+              })
+            }.listDirection(Axis.Horizontal).width('100%').height(80).padding({ left: 16 })
+          }
+          .backgroundColor(Color.White).margin({ left: 16, right: 16 }).borderRadius(12)
+          .padding({ top: 12, bottom: 10 })
+
+          // ========== 功能菜单（所有用户可用） ==========
+          Column({ space: 1 }) {
+            this.MenuItem($r('app.string.menu_my_plans'), () => {
+              this.router.push(RouterKey.TRAINING_PLAN_LIST);
+            })
+            this.MenuItem($r('app.string.menu_history'), () => {
+              this.router.push(RouterKey.EXERCISE_HISTORY);
+            })
+            this.MenuItem($r('app.string.menu_manual_record'), () => {
+              this.router.push(RouterKey.MANUAL_RECORD);
+            })
+            this.MenuItem($r('app.string.menu_goal_setting'), () => {
+              this.router.push(RouterKey.GOAL_SETTING);
+            })
+            this.MenuItem($r('app.string.menu_multi_device'), () => {
+              if (this.isLoggedIn) {
+                AlertDialog.show({ message: '多端同步功能：在其他设备上登录同一华为账号即可同步训练数据' });
+              } else {
+                AlertDialog.show({ message: '登录华为账号后，可在多个设备间同步训练数据' });
+              }
+            })
+            this.MenuItem($r('app.string.menu_settings'), () => {
+              // 设置页面占位
+            })
+          }.width('90%').backgroundColor(Color.White).borderRadius(12)
+
+          // ========== 退出登录（仅已登录时显示） ==========
+          if (this.isLoggedIn) {
             Button($r('app.string.logout_btn'))
               .width('90%').height(44).margin({ top: 8 })
               .backgroundColor(Color.White).fontColor(Color.Red)
@@ -163,23 +201,9 @@ export struct Mine {
                 this.userService.logout();
                 this.refreshData();
               })
-          }.padding({ bottom: 20 })
-        }.width('100%').layoutWeight(1)
-      } else {
-        // ========== 未登录视图 ==========
-        Column({ space: 24 }) {
-          Column() {
-            Circle({ width: 80, height: 80 }).fill($r('app.color.placeholder_bg'))
-          }.margin({ top: 80 })
-          Text($r('app.string.not_logged_in_title'))
-            .fontSize(20).fontWeight(FontWeight.Bold)
-          Text($r('app.string.not_logged_in_hint'))
-            .fontSize(14).fontColor($r('app.color.text_gray'))
-          Button($r('app.string.login_register_btn'))
-            .width('60%').height(44)
-            .onClick(() => { this.router.push(RouterKey.LOGIN); })
-        }.width('100%').layoutWeight(1).justifyContent(FlexAlign.Start)
-      }
+          }
+        }.padding({ bottom: 20 })
+      }.width('100%').layoutWeight(1)
     }
     .width('100%')
     .height('100%')

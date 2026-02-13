@@ -1,6 +1,9 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import auth from '@hw-agconnect/auth';
+import { buffer } from '@kit.ArkTS';
+
 
 const DOMAIN = 0x0000;
 
@@ -11,6 +14,12 @@ export default class EntryAbility extends UIAbility {
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
+
+    let file = this.context.resourceManager.getRawFileContentSync('agconnect-services.json');
+    let json: string = buffer.from(file.buffer).toString();
+    auth.init(this.context, json);
+    auth.setClientId("6917597094078837893"); // 设置Client ID
+    auth.setClientSecret("2bb0618ee19a12d3b800f5be1913a00691d34c2e8d20ff87b24f456ec7908bd0"); // 设置Client Secret
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 

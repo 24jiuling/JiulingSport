@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "C:/Users/34484/.ohos/config/default_JiulingSport_ojl3f-YIR4sYmoJiUWTqT1cJYe1QBHje83LFCn8FtfI=.p12",
+          "storePassword": "0000001B69954A11EADD4BA04F401A1A8B3BB16F939DE2EC2FB072680285512A23F842CD376060FDD9F682",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BB9B3162E68F8CCE0B5589AAF61A0233AEBD9D9DEF0B5B64DD42ABD37751AFDCB29957623637757",
+          "signAlg": "SHA256withECDSA",
+          "profile": "D:/hm/JiulingSport/profileDebug.p7b",
+          "certpath": "C:/Users/34484/.ohos/config/default_JiulingSport_ojl3f-YIR4sYmoJiUWTqT1cJYe1QBHje83LFCn8FtfI=.cer"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

@@ -99,9 +99,124 @@
 - 开发规范请遵循鸿蒙的 MVC 原则。
 - 对于文本内容封装为resource文件，写在AppScopeCommon\src\main\resources\base\element\string.json。
 - 对于颜色内容封装为resource文件，写在AppScopeCommon\src\main\resources\base\element\color.json。
+- 对于新增功能及页面，写在feature里面定义好的功能模块
+- 对于新增实体类或者工具方法，写在common里面定义好的模块
+- 对于entry，只定义首页ui以及跳转其他功能界面入口
 
 ## UI 布局与导航规范
 
 - 所有非首页页面（被路由跳转的目标页面）必须使用 `NavDestination` 组件包裹根布局。
 - 所有页面布局容器必须显式设置为全屏占满（`.width('100%').height('100%')`），以防止在中大屏幕（md/lg）设备上出现布局塌陷或仅显示在侧边栏的问题。
 
+
+
+
+
+# 鸿蒙应用华为账号一键登录配置指南
+
+## 一、开发环境准备
+```typescript
+// module.json5配置示例
+{
+  "module": {
+    "metaData": [{
+      "name": "client_id",
+      "value": "从AGC控制台获取的Client ID"
+    }]
+  }
+}
+二、核心功能实现
+1. 授权请求构建
+
+
+
+
+import { authentication, util } from '@kit.AccountKit'<rsup>2</rsup>;
+
+const buildAuthRequest = () => {
+  const authRequest = new authentication.HuaweiIDProvider()
+    .createAuthorizationWithHuaweiIDRequest();
+  
+  // 设置必选参数
+  authRequest.scopes = ['quickLoginAnonymousPhone'];
+  authRequest.state = util.generateRandomUUID();
+  authRequest.forceAuthorization = false;
+
+  return authRequest;
+}
+2. 登录按钮集成
+
+
+
+
+import { LoginWithHuaweiIDButton } from '@kit.AccountKit';
+
+@Entry
+@Component
+struct LoginPage {
+  build() {
+    Column() {
+      LoginWithHuaweiIDButton({
+        params: {
+          scopes: ['quickLoginAnonymousPhone'],
+          riskLevel: true
+        }
+      })
+      .onClick(result => {
+        this.handleLoginResult(result);
+      })
+    }
+  }
+}
+三、错误处理规范
+错误码	处理建议	触发场景示例
+1001502014	检查scope权限是否通过审核	未申请quickLoginMobilePhone权限
+1001500003	验证服务器是否部署在中国境内	海外服务器调用接口
+1001500001	关闭代理或配置证书白名单	开启网络代理工具时触发
+四、服务端对接流程
+获取Access Token
+调用用户信息接口
+
+
+
+// 服务端示例（Node.js）
+const getUserInfo = async (authCode) => {
+  const tokenResponse = await fetch('https://oauth-login.cloud.huawei.com/oauth2/v3/token', {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: authCode,
+      client_id: 'your_client_id',
+      client_secret: 'your_client_secret'
+    })
+  });
+
+  const { access_token } = await tokenResponse.json();
+  return fetch('https://account.cloud.huawei.com/rest.php', {
+    headers: {
+      'Authorization': `Bearer ${access_token}`
+    }
+  });
+}
+五、调试与优化建议
+真机调试前同步系统时间
+使用Hilog监控授权流程
+
+
+
+import { hilog } from '@kit.PerformanceAnalysisKit'<rsup>1</rsup>;
+
+hilog.info(0x0000, 'AuthFlow', '授权请求已发送');
+hilog.error(0x0000, 'AuthError', `错误码: ${error.code}`)<rsup>1</rsup>;
+六、合规性要求
+登录页面必须包含《华为账号用户协议》跳转
+未绑定手机号的账号需提供备选登录方式
+中国境外账号需引导至国际版登录入口
+
+
+
+// 协议跳转实现示例
+Text('用户协议')
+  .onClick(() => {
+    openUrl('https://developer.huawei.com/consumer/cn/doc/');
+  })

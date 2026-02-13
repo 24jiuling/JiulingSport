@@ -2,7 +2,6 @@
 import { Course, TrainingPlan } from 'lib_entity';
 import { FitnessService, UserService } from 'lib_api';
 import { RouterManager, RouterKey } from 'lib_router';
-import { VideoParam } from 'feature_video';
 import { SportParam } from 'feature_sport';
 
 
@@ -17,8 +16,13 @@ export struct Home {
   @State userName: string = '';
   @State todayStats: number[] = [0, 0, 0]; // [count, duration, calories]
   @State consecutiveDays: number = 0;
+  @StorageProp('userLoginState') @Watch('onLoginStateChange') loginState: number = 0;
 
   aboutToAppear() {
+    this.refreshData();
+  }
+
+  onLoginStateChange(): void {
     this.refreshData();
   }
 
@@ -98,11 +102,14 @@ export struct Home {
               }
             }
           } else {
-            // 未登录: 欢迎 Banner
+            // 未登录: 欢迎 Banner（本地模式，无需登录也可使用）
             Text($r('app.string.banner_title'))
               .fontColor($r('app.color.text_white'))
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
+            Text($r('app.string.local_mode_hint'))
+              .fontColor($r('app.color.plan_text_secondary'))
+              .fontSize(12).margin({ top: 6 })
           }
         }
         .width('90%')
@@ -110,33 +117,39 @@ export struct Home {
         .backgroundColor($r('app.color.banner_bg'))
         .borderRadius(16)
         .alignItems(HorizontalAlign.Start)
-        .onClick(() => {
-          if (!this.isLoggedIn) {
-            this.router.push(RouterKey.LOGIN);
-          }
-        })
 
-        // 快捷操作区
-        if (this.isLoggedIn) {
-          Row() {
-            Column({ space: 4 }) {
-              Text('📋').fontSize(24)
-              Text($r('app.string.quick_plan')).fontSize(11).fontColor($r('app.color.text_gray'))
-            }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.TRAINING_PLAN_LIST); })
-            Column({ space: 4 }) {
-              Text('✏️').fontSize(24)
-              Text($r('app.string.quick_record')).fontSize(11).fontColor($r('app.color.text_gray'))
-            }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.MANUAL_RECORD); })
-            Column({ space: 4 }) {
-              Text('🏅').fontSize(24)
-              Text($r('app.string.quick_badge')).fontSize(11).fontColor($r('app.color.text_gray'))
-            }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.BADGE_GALLERY); })
-            Column({ space: 4 }) {
-              Text('📊').fontSize(24)
-              Text($r('app.string.quick_history')).fontSize(11).fontColor($r('app.color.text_gray'))
-            }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.EXERCISE_HISTORY); })
-          }.width('90%').padding(12).backgroundColor(Color.White).borderRadius(12)
-          .shadow({ radius: 4, color: $r('app.color.shadow_color_light'), offsetY: 2 })
+        // 快捷操作区（无论是否登录均可使用）
+        Row() {
+          Column({ space: 4 }) {
+            Text('📋').fontSize(24)
+            Text($r('app.string.quick_plan')).fontSize(11).fontColor($r('app.color.text_gray'))
+          }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.TRAINING_PLAN_LIST); })
+          Column({ space: 4 }) {
+            Text('✏️').fontSize(24)
+            Text($r('app.string.quick_record')).fontSize(11).fontColor($r('app.color.text_gray'))
+          }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.MANUAL_RECORD); })
+          Column({ space: 4 }) {
+            Text('🏅').fontSize(24)
+            Text($r('app.string.quick_badge')).fontSize(11).fontColor($r('app.color.text_gray'))
+          }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.BADGE_GALLERY); })
+          Column({ space: 4 }) {
+            Text('📊').fontSize(24)
+            Text($r('app.string.quick_history')).fontSize(11).fontColor($r('app.color.text_gray'))
+          }.layoutWeight(1).onClick(() => { this.router.push(RouterKey.EXERCISE_HISTORY); })
+        }.width('90%').padding(12).backgroundColor(Color.White).borderRadius(12)
+        .shadow({ radius: 4, color: $r('app.color.shadow_color_light'), offsetY: 2 })
+
+        // 未登录时显示同步提示
+        if (!this.isLoggedIn) {
+          Row({ space: 6 }) {
+            Text('🔄').fontSize(13)
+            Text($r('app.string.sync_login_hint'))
+              .fontSize(12).fontColor($r('app.color.text_gray')).layoutWeight(1)
+            Text($r('app.string.login_text'))
+              .fontSize(12).fontColor($r('app.color.primary_blue'))
+              .onClick(() => { this.router.push(RouterKey.LOGIN); })
+          }
+          .width('90%').padding(10).backgroundColor(Color.White).borderRadius(10)
         }
 
         // 进行中的计划
@@ -207,13 +220,8 @@ export struct Home {
                   .fontSize(12)
                   .height(28)
                   .onClick(() => {
-                    if (this.isLoggedIn) {
-                      let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories);
-                      this.router.push(RouterKey.ACTIVE_TRAINING, param);
-                    } else {
-                      let param: VideoParam = new VideoParam(item.title, item.videoUrl);
-                      this.router.push(RouterKey.VIDEO_PLAYER, param);
-                    }
+                    let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories);
+                    this.router.push(RouterKey.ACTIVE_TRAINING, param);
                   })
               }
               .padding(10)

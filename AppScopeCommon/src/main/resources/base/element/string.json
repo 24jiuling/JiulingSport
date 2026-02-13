@@ -103,8 +103,26 @@
     { "name": "menu_multi_device", "value": "多端同步" },
     { "name": "logout_btn", "value": "退出登录" },
     { "name": "not_logged_in_title", "value": "尚未登录" },
-    { "name": "not_logged_in_hint", "value": "登录后即可使用全部功能" },
+    { "name": "not_logged_in_hint", "value": "登录后可同步数据到其他设备" },
     { "name": "login_register_btn", "value": "登录 / 注册" },
-    { "name": "status_ongoing_bg", "value": "进行中" }
+    { "name": "status_ongoing_bg", "value": "进行中" },
+    { "name": "agree_text", "value": "我已阅读并同意" },
+    { "name": "user_agreement", "value": "《用户协议》" },
+    { "name": "and_text", "value": "和" },
+    { "name": "privacy_policy", "value": "《隐私政策》" },
+    { "name": "huawei_auth_protocol", "value": "《华为账号用户认证协议》" },
+    { "name": "agree_and_login", "value": "同意并登录" },
+    { "name": "cancel_text", "value": "取消" },
+    { "name": "agreement_dialog_title", "value": "用户协议与隐私政策" },
+    { "name": "other_login_text", "value": "其他登录方式" },
+    { "name": "sync_login_hint", "value": "登录华为账号可同步训练数据到其他设备" },
+    { "name": "network_error_hint", "value": "网络异常，请检查网络连接后重试" },
+    { "name": "service_error_hint", "value": "服务异常，请稍后重试" },
+    { "name": "huawei_not_login_hint", "value": "请先在系统设置中登录华为账号" },
+    { "name": "scope_not_supported", "value": "当前华为账号不支持此功能" },
+    { "name": "hwid_known_btn", "value": "我知道了" },
+    { "name": "local_mode_title", "value": "本地模式" },
+    { "name": "local_mode_hint", "value": "数据仅保存在本设备，登录可同步到其他设备" },
+    { "name": "sync_enabled_hint", "value": "已登录华为账号，数据可跨设备同步" }
   ]
 }

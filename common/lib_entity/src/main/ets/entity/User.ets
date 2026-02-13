@@ -11,6 +11,10 @@ export class User {
   totalTime: number = 0;
   totalCalories: number = 0;
   lastCheckInDate: string = '';
+  unionID: string = '';
+  openID: string = '';
+  authorizationCode: string = '';
+  agcUid: string = '';
 
   constructor(id: number, username: string, avatar: string) {
     this.id = id;

@@ -29,16 +29,19 @@ export class UserService {
     return user;
   }
 
-  // --- 华为账号一键登录 ---
-  loginWithHuaweiAccount(): User {
-    let user = new User(2, '华为用户', '');
-    user.phone = '';
+  // --- 华为账号登录 ---
+  loginWithHuaweiAccount(unionID: string, openID: string, authCode: string | undefined): User {
+    let user = new User(Date.now(), '华为用户', '');
+    user.unionID = unionID;
+    user.openID = openID;
+    user.authorizationCode = authCode ?? '';
     user.isLoggedIn = true;
     user.totalWorkouts = 0;
     user.totalTime = 0;
     user.totalCalories = 0;
     user.consecutiveDays = 0;
     this.currentUser = user;
+    this.notifyLoginStateChanged();
     return user;
   }
 
@@ -70,6 +73,12 @@ export class UserService {
       this.currentUser.isLoggedIn = false;
     }
     this.currentUser = null;
+    this.notifyLoginStateChanged();
+  }
+
+  // --- 通知登录状态变化（驱动 UI 响应式更新） ---
+  private notifyLoginStateChanged(): void {
+    AppStorage.setOrCreate('userLoginState', Date.now());
   }
 
   // --- 设定健身目标 ---

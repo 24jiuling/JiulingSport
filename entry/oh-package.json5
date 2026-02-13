@@ -14,7 +14,10 @@
     "feature_training": "file:../feature/feature_training",
     "feature_sport": "file:../feature/feature_sport",
     "feature_medal": "file:../feature/feature_medal",
-    "feature_log": "file:../feature/feature_log"
-  }
+    "feature_log": "file:../feature/feature_log",
+    "@hw-agconnect/hmcore": "^1.0.5",
+    "@hw-agconnect/auth": "^1.0.5",
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }
-
