@@ -4,6 +4,7 @@ import { FitnessService } from 'lib_api';
 import { RouterManager, RouterKey } from 'lib_router';
 import { SportParam } from 'feature_sport';
 import { TrainingParam } from 'feature_training';
+import { VideoParam } from 'feature_video';
 
 @Component
 export struct CourseList {
@@ -19,6 +20,19 @@ export struct CourseList {
     this.courses = this.service.getAllCourses();
     this.plans = this.service.getRecommendedPlans();
     this.activePlan = this.service.getActivePlan();
+  }
+
+  getCategoryDisplayName(cat: string): ResourceStr {
+    if (cat === '全部') {
+      return $r('app.string.category_all');
+    } else if (cat === '减脂') {
+      return $r('app.string.goal_lose_fat_label');
+    } else if (cat === '增肌') {
+      return $r('app.string.goal_gain_muscle_label');
+    } else if (cat === '耐力') {
+      return $r('app.string.category_endurance');
+    }
+    return $r('app.string.category_flexibility');
   }
 
   build() {
@@ -49,7 +63,7 @@ export struct CourseList {
             .width('100%').color($r('app.color.text_white'))
           Button($r('app.string.continue_training_btn'))
             .width('100%').height(36).fontSize(13).margin({ top: 4 })
-            .backgroundColor('#40FFFFFF').fontColor($r('app.color.text_white'))
+            .backgroundColor($r('app.color.semi_transparent_white')).fontColor($r('app.color.text_white'))
             .onClick(() => {
               if (this.activePlan !== null) {
                 let param = new TrainingParam(this.activePlan.id);
@@ -65,7 +79,7 @@ export struct CourseList {
       Scroll() {
         Row({ space: 8 }) {
           ForEach(this.categories, (cat: string) => {
-            Text(cat)
+            Text(this.getCategoryDisplayName(cat))
               .fontSize(13)
               .fontColor(this.selectedCategory === cat ? $r('app.color.text_white') : $r('app.color.primary_blue'))
               .backgroundColor(this.selectedCategory === cat ? $r('app.color.primary_blue') : Color.White)
@@ -106,15 +120,28 @@ export struct CourseList {
                 Text(item.description).fontSize(13).fontColor($r('app.color.text_gray'))
                   .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
                 Row() {
-                  Text(item.duration.toString() + '分钟')
+                  Text(item.duration.toString())
+                    .fontSize(14).fontColor($r('app.color.text_gray'))
+                  Text($r('app.string.unit_min'))
                     .fontSize(14).fontColor($r('app.color.text_gray'))
                   Blank()
-                  Text(item.calories.toString() + '千卡')
+                  Text(item.calories.toString())
+                    .fontSize(14).fontColor($r('app.color.text_gray'))
+                  Text($r('app.string.unit_kcal'))
                     .fontSize(14).fontColor($r('app.color.text_gray'))
                   Blank()
+                  Button($r('app.string.watch_video_btn')).fontSize(11).height(26)
+                    .backgroundColor(Color.White)
+                    .fontColor($r('app.color.primary_blue'))
+                    .border({ width: 1, color: $r('app.color.primary_blue') })
+                    .margin({ right: 6 })
+                    .onClick(() => {
+                      let videoParam: VideoParam = new VideoParam(item.title, item.videoUrl, item.id);
+                      this.router.push(RouterKey.VIDEO_PLAYER, videoParam);
+                    })
                   Button($r('app.string.start_button')).fontSize(11).height(26)
                     .onClick(() => {
-                      let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories);
+                      let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories, item.videoUrl);
                       this.router.push(RouterKey.ACTIVE_TRAINING, param);
                     })
                 }.width('100%')

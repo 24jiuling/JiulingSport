@@ -1,5 +1,9 @@
 
 import { User, Goal, TrainingPlan, ExerciseRecord, Badge, Course } from 'lib_entity';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const FITNESS_TAG: string = 'FitnessService';
+const FITNESS_DOMAIN: number = 0x0000;
 
 export class FitnessService {
   private static instance: FitnessService;
@@ -24,29 +28,30 @@ export class FitnessService {
   // ==================== 初始化模拟数据 ====================
 
   private initMockData(): void {
-    // 初始化课程库
-    let c1 = new Course(1, '瑜伽基础', '放松身心，提升柔韧性', '', 'https://vjs.zencdn.net/v/oceans.mp4', 30, 80);
+    // 初始化课程库（使用本地 rawfile 视频资源）
+    let localVideo: string = 'video/ChenQiuNan_5e1da06b35047bf399e480360b3ba107.mp4';
+    let c1 = new Course(1, '瑜伽基础', '放松身心，提升柔韧性', '', localVideo, 30, 80);
     c1.category = '柔韧';
     c1.difficulty = '初级';
-    let c2 = new Course(2, 'HIIT燃脂', '高强度间歇训练，快速燃脂', '', 'https://vjs.zencdn.net/v/oceans.mp4', 20, 250);
+    let c2 = new Course(2, 'HIIT燃脂', '高强度间歇训练，快速燃脂', '', localVideo, 20, 250);
     c2.category = '减脂';
     c2.difficulty = '高级';
-    let c3 = new Course(3, '力量训练', '全身肌肉构建训练', '', 'https://vjs.zencdn.net/v/oceans.mp4', 45, 300);
+    let c3 = new Course(3, '力量训练', '全身肌肉构建训练', '', localVideo, 45, 300);
     c3.category = '增肌';
     c3.difficulty = '中级';
-    let c4 = new Course(4, '普拉提', '核心力量提升', '', 'https://vjs.zencdn.net/v/oceans.mp4', 30, 100);
+    let c4 = new Course(4, '普拉提', '核心力量提升', '', localVideo, 30, 100);
     c4.category = '柔韧';
     c4.difficulty = '初级';
-    let c5 = new Course(5, '耐力跑步', '提升心肺耐力', '', 'https://vjs.zencdn.net/v/oceans.mp4', 40, 400);
+    let c5 = new Course(5, '耐力跑步', '提升心肺耐力', '', localVideo, 40, 400);
     c5.category = '耐力';
     c5.difficulty = '中级';
-    let c6 = new Course(6, '哑铃增肌', '上肢肌群专项训练', '', 'https://vjs.zencdn.net/v/oceans.mp4', 35, 280);
+    let c6 = new Course(6, '哑铃增肌', '上肢肌群专项训练', '', localVideo, 35, 280);
     c6.category = '增肌';
     c6.difficulty = '中级';
-    let c7 = new Course(7, '有氧操', '全身有氧燃脂操', '', 'https://vjs.zencdn.net/v/oceans.mp4', 25, 200);
+    let c7 = new Course(7, '有氧操', '全身有氧燃脂操', '', localVideo, 25, 200);
     c7.category = '减脂';
     c7.difficulty = '初级';
-    let c8 = new Course(8, '拉伸恢复', '运动后放松拉伸', '', 'https://vjs.zencdn.net/v/oceans.mp4', 15, 40);
+    let c8 = new Course(8, '拉伸恢复', '运动后放松拉伸', '', localVideo, 15, 40);
     c8.category = '柔韧';
     c8.difficulty = '初级';
     this.allCourses = [c1, c2, c3, c4, c5, c6, c7, c8];
@@ -150,6 +155,53 @@ export class FitnessService {
       }
     }
     return null;
+  }
+
+  // ==================== 训练消耗计算 ====================
+
+  calculateCalories(courseId: number, elapsedSeconds: number, courseDuration: number, courseCalories: number): number {
+    hilog.debug(FITNESS_DOMAIN, FITNESS_TAG, 'calculateCalories - courseId: %{public}d, elapsed: %{public}d秒, duration: %{public}d分钟, baseCalories: %{public}d',
+      courseId, elapsedSeconds, courseDuration, courseCalories);
+    let basePerMinute: number = 5;
+    if (courseDuration > 0) {
+      basePerMinute = courseCalories / courseDuration;
+    }
+    let course = this.getCourseById(courseId);
+    let multiplier: number = 1;
+    if (course !== null) {
+      multiplier = this.getCalorieMultiplier(course.category, course.difficulty);
+      hilog.debug(FITNESS_DOMAIN, FITNESS_TAG, 'calorie multiplier - category: %{public}s, difficulty: %{public}s, multiplier: %{public}f',
+        course.category, course.difficulty, multiplier);
+    } else {
+      hilog.warn(FITNESS_DOMAIN, FITNESS_TAG, 'calculateCalories - 未找到courseId: %{public}d 的课程, 使用默认乘数', courseId);
+    }
+    let result = Math.round((elapsedSeconds / 60) * basePerMinute * multiplier);
+    hilog.debug(FITNESS_DOMAIN, FITNESS_TAG, 'calculateCalories result: %{public}d kcal', result);
+    return result;
+  }
+
+  private getCalorieMultiplier(category: string, difficulty: string): number {
+    hilog.debug(FITNESS_DOMAIN, FITNESS_TAG, 'getCalorieMultiplier - category: %{public}s, difficulty: %{public}s', category, difficulty);
+    let categoryFactor: number = 1;
+    if (category === '减脂') {
+      categoryFactor = 1.2;
+    } else if (category === '增肌') {
+      categoryFactor = 1.1;
+    } else if (category === '耐力') {
+      categoryFactor = 1.3;
+    } else if (category === '柔韧') {
+      categoryFactor = 0.8;
+    }
+
+    let difficultyFactor: number = 1;
+    if (difficulty === '初级') {
+      difficultyFactor = 0.9;
+    } else if (difficulty === '中级') {
+      difficultyFactor = 1.0;
+    } else if (difficulty === '高级') {
+      difficultyFactor = 1.1;
+    }
+    return categoryFactor * difficultyFactor;
   }
 
   // ==================== 训练计划管理 ====================

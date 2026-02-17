@@ -71,6 +71,18 @@
     {
       "name": "warning_red",
       "value": "#F44336"
+    },
+    {
+      "name": "semi_transparent_white",
+      "value": "#40FFFFFF"
+    },
+    {
+      "name": "dialog_overlay",
+      "value": "#80000000"
+    },
+    {
+      "name": "arrow_gray",
+      "value": "#CCCCCC"
     }
   ]
 }

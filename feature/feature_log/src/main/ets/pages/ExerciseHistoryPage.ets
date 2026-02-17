@@ -90,10 +90,18 @@ export struct ExerciseHistoryPage {
 
                 // 右侧数据
                 Column({ space: 2 }) {
-                  Text(record.duration.toString() + '分钟')
-                    .fontSize(13).fontColor($r('app.color.text_gray'))
-                  Text(record.calories.toString() + '千卡')
-                    .fontSize(13).fontWeight(FontWeight.Bold).fontColor($r('app.color.primary_blue'))
+                  Row() {
+                    Text(record.duration.toString())
+                      .fontSize(13).fontColor($r('app.color.text_gray'))
+                    Text($r('app.string.unit_min'))
+                      .fontSize(13).fontColor($r('app.color.text_gray'))
+                  }
+                  Row() {
+                    Text(record.calories.toString())
+                      .fontSize(13).fontWeight(FontWeight.Bold).fontColor($r('app.color.primary_blue'))
+                    Text($r('app.string.unit_kcal'))
+                      .fontSize(13).fontWeight(FontWeight.Bold).fontColor($r('app.color.primary_blue'))
+                  }
                 }.alignItems(HorizontalAlign.End)
               }
               .padding(12).backgroundColor(Color.White).borderRadius(12).width('100%')

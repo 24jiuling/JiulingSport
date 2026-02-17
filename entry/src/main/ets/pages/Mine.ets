@@ -2,13 +2,20 @@
 import { User, Badge } from 'lib_entity';
 import { FitnessService, UserService } from 'lib_api';
 import { RouterManager, RouterKey } from 'lib_router';
+import { StorageKey } from 'appscopecommon';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const MINE_TAG: string = 'MinePage';
+const MINE_DOMAIN: number = 0x0000;
 
 @Component
 export struct Mine {
   @State user: User | null = null;
   @State badges: Badge[] = [];
   @State isLoggedIn: boolean = false;
-  @StorageProp('userLoginState') @Watch('onLoginStateChange') loginState: number = 0;
+  @State isTodayCheckedIn: boolean = false;
+  @StorageProp(StorageKey.USER_LOGIN_STATE) @Watch('onLoginStateChange') loginState: number = 0;
+  @StorageProp(StorageKey.LAST_CHECK_IN_DATE) @Watch('onPersistedCheckInChange') persistedCheckInDate: string = '';
   private service: FitnessService = FitnessService.getInstance();
   private userService: UserService = UserService.getInstance();
   private router: RouterManager = RouterManager.getInstance();
@@ -21,9 +28,22 @@ export struct Mine {
     this.refreshData();
   }
 
+  onPersistedCheckInChange(): void {
+    let today = this.userService.getTodayString();
+    this.isTodayCheckedIn = this.persistedCheckInDate === today;
+    hilog.info(MINE_DOMAIN, MINE_TAG, 'onPersistedCheckInChange - persistedDate: %{public}s, today: %{public}s, isTodayCheckedIn: %{public}s',
+      this.persistedCheckInDate, today, this.isTodayCheckedIn.toString());
+  }
+
   refreshData(): void {
+    hilog.info(MINE_DOMAIN, MINE_TAG, 'refreshData - 刷新我的页数据');
     this.user = this.userService.getCurrentUser();
     this.isLoggedIn = this.userService.isLoggedIn();
+    // 直接从持久化存储读取打卡状态，不依赖 currentUser 内存状态
+    let today = this.userService.getTodayString();
+    this.isTodayCheckedIn = this.persistedCheckInDate === today;
+    hilog.info(MINE_DOMAIN, MINE_TAG, 'refreshData - isLoggedIn: %{public}s, isTodayCheckedIn: %{public}s, persistedDate: %{public}s',
+      this.isLoggedIn.toString(), this.isTodayCheckedIn.toString(), this.persistedCheckInDate);
     this.badges = this.service.getAllBadges();
     if (this.user !== null) {
       this.service.checkAndUnlockBadges(this.user);
@@ -53,7 +73,7 @@ export struct Mine {
                         .fontSize(12).fontColor($r('app.color.text_white'))
                     }
                     .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-                    .borderRadius(10).backgroundColor('#40FFFFFF')
+                    .borderRadius(10).backgroundColor($r('app.color.semi_transparent_white'))
                   }
                 }.alignItems(HorizontalAlign.Start)
               }.padding({ left: 24, right: 24, top: 20, bottom: 12 })
@@ -81,7 +101,7 @@ export struct Mine {
               Row() {
                 Button($r('app.string.login_register_btn'))
                   .height(36).fontSize(14)
-                  .backgroundColor('#40FFFFFF').fontColor($r('app.color.text_white'))
+                  .backgroundColor($r('app.color.semi_transparent_white')).fontColor($r('app.color.text_white'))
                   .onClick(() => { this.router.push(RouterKey.LOGIN); })
               }.padding({ left: 24, right: 24, bottom: 16 })
             }
@@ -89,7 +109,9 @@ export struct Mine {
             // 连续打卡（已登录且有打卡记录）
             if (this.isLoggedIn && this.user !== null && this.user.consecutiveDays > 0) {
               Row({ space: 4 }) {
-                Text('🔥 ' + this.user.consecutiveDays.toString() + '天连续打卡')
+                Text('🔥 ' + this.user.consecutiveDays.toString())
+                  .fontSize(13).fontColor($r('app.color.text_white'))
+                Text($r('app.string.consecutive_days_suffix'))
                   .fontSize(13).fontColor($r('app.color.text_white'))
               }.padding({ left: 24, bottom: 16 })
             }
@@ -122,13 +144,18 @@ export struct Mine {
           .shadow({ radius: 8, color: $r('app.color.shadow_color_dark'), offsetY: 4 })
 
           // ========== 打卡按钮 ==========
-          if (!this.userService.isTodayCheckedIn()) {
+          if (!this.isTodayCheckedIn) {
             Button($r('app.string.check_in_btn'))
               .width('90%').height(44)
               .onClick(() => {
+                hilog.info(MINE_DOMAIN, MINE_TAG, '我的页今日打卡 - 开始执行');
                 this.userService.checkIn();
-                this.refreshData();
-                AlertDialog.show({ message: '打卡成功！' });
+                // 直接更新 @State 驱动 UI 立即刷新
+                this.isTodayCheckedIn = true;
+                this.user = this.userService.getCurrentUser();
+                hilog.info(MINE_DOMAIN, MINE_TAG, '我的页今日打卡 - 打卡完成, isTodayCheckedIn=%{public}s',
+                  this.isTodayCheckedIn.toString());
+                AlertDialog.show({ message: getContext(this).resourceManager.getStringSync($r('app.string.check_in_success')) });
               })
           } else {
             Row() {
@@ -181,9 +208,9 @@ export struct Mine {
             })
             this.MenuItem($r('app.string.menu_multi_device'), () => {
               if (this.isLoggedIn) {
-                AlertDialog.show({ message: '多端同步功能：在其他设备上登录同一华为账号即可同步训练数据' });
+                AlertDialog.show({ message: getContext(this).resourceManager.getStringSync($r('app.string.multi_device_sync_logged_in')) });
               } else {
-                AlertDialog.show({ message: '登录华为账号后，可在多个设备间同步训练数据' });
+                AlertDialog.show({ message: getContext(this).resourceManager.getStringSync($r('app.string.multi_device_sync_not_logged_in')) });
               }
             })
             this.MenuItem($r('app.string.menu_settings'), () => {
@@ -215,7 +242,7 @@ export struct Mine {
     Row() {
       Text(title).fontSize(16).fontWeight(FontWeight.Medium)
       Blank()
-      Text('>').fontColor('#CCC')
+      Text('>').fontColor($r('app.color.arrow_gray'))
     }
     .width('100%').padding(16)
     .onClick(() => { action(); })

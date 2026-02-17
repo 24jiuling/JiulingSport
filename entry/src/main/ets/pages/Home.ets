@@ -2,7 +2,14 @@
 import { Course, TrainingPlan } from 'lib_entity';
 import { FitnessService, UserService } from 'lib_api';
 import { RouterManager, RouterKey } from 'lib_router';
+import { StorageKey } from 'appscopecommon';
 import { SportParam } from 'feature_sport';
+import { VideoParam } from 'feature_video';
+import promptAction from '@ohos.promptAction';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const HOME_TAG: string = 'HomePage';
+const HOME_DOMAIN: number = 0x0000;
 
 
 @Component
@@ -16,7 +23,9 @@ export struct Home {
   @State userName: string = '';
   @State todayStats: number[] = [0, 0, 0]; // [count, duration, calories]
   @State consecutiveDays: number = 0;
-  @StorageProp('userLoginState') @Watch('onLoginStateChange') loginState: number = 0;
+  @State isTodayCheckedIn: boolean = false;
+  @StorageProp(StorageKey.USER_LOGIN_STATE) @Watch('onLoginStateChange') loginState: number = 0;
+  @StorageProp(StorageKey.LAST_CHECK_IN_DATE) @Watch('onPersistedCheckInChange') persistedCheckInDate: string = '';
 
   aboutToAppear() {
     this.refreshData();
@@ -26,10 +35,20 @@ export struct Home {
     this.refreshData();
   }
 
+  onPersistedCheckInChange(): void {
+    let today = this.userService.getTodayString();
+    this.isTodayCheckedIn = this.persistedCheckInDate === today;
+    hilog.info(HOME_DOMAIN, HOME_TAG, 'onPersistedCheckInChange - persistedDate: %{public}s, today: %{public}s, isTodayCheckedIn: %{public}s',
+      this.persistedCheckInDate, today, this.isTodayCheckedIn.toString());
+  }
+
   refreshData(): void {
+    hilog.info(HOME_DOMAIN, HOME_TAG, 'refreshData - 刷新首页数据');
     this.featuredCourses = this.service.getAllCourses();
     this.activePlan = this.service.getActivePlan();
     this.todayStats = this.service.getTodayStats();
+    hilog.info(HOME_DOMAIN, HOME_TAG, '今日统计: 次数=%{public}d, 时长=%{public}d, 卡路里=%{public}d',
+      this.todayStats[0], this.todayStats[1], this.todayStats[2]);
     let currentUser = this.userService.getCurrentUser();
     if (currentUser !== null) {
       this.isLoggedIn = currentUser.isLoggedIn;
@@ -38,6 +57,9 @@ export struct Home {
     } else {
       this.isLoggedIn = false;
     }
+    // 直接从持久化存储读取打卡状态，不依赖 currentUser 内存状态
+    let today = this.userService.getTodayString();
+    this.isTodayCheckedIn = this.persistedCheckInDate === today;
   }
 
   build() {
@@ -97,9 +119,36 @@ export struct Home {
             if (this.consecutiveDays > 0) {
               Row() {
                 Text('🔥').fontSize(14)
-                Text(' ' + this.consecutiveDays.toString() + '天连续打卡')
+                Text(' ' + this.consecutiveDays.toString())
+                  .fontSize(12).fontColor($r('app.color.text_white'))
+                Text($r('app.string.consecutive_days_suffix'))
                   .fontSize(12).fontColor($r('app.color.text_white'))
               }
+            }
+            if (!this.isTodayCheckedIn) {
+              Button($r('app.string.check_in_btn'))
+                .fontSize(12)
+                .height(28)
+                .margin({ top: 8 })
+                .onClick(() => {
+                  hilog.info(HOME_DOMAIN, HOME_TAG, '首页今日打卡 - 开始执行');
+                  this.userService.checkIn();
+                  // 直接更新 @State 驱动 UI 立即刷新
+                  this.isTodayCheckedIn = true;
+                  let currentUser = this.userService.getCurrentUser();
+                  if (currentUser !== null) {
+                    this.consecutiveDays = currentUser.consecutiveDays;
+                  }
+                  hilog.info(HOME_DOMAIN, HOME_TAG, '首页今日打卡 - 打卡完成, isTodayCheckedIn=%{public}s, consecutiveDays=%{public}d',
+                    this.isTodayCheckedIn.toString(), this.consecutiveDays);
+                  promptAction.showToast({ message: getContext(this).resourceManager.getStringSync($r('app.string.check_in_success')) });
+                })
+            } else {
+              Row() {
+                Text('✅').fontSize(12)
+                Text($r('app.string.already_checked_in'))
+                  .fontSize(11).fontColor($r('app.color.text_white')).margin({ left: 6 })
+              }.margin({ top: 8 })
             }
           } else {
             // 未登录: 欢迎 Banner（本地模式，无需登录也可使用）
@@ -167,7 +216,9 @@ export struct Home {
               Row() {
                 Text($r('app.string.progress_label')).fontSize(12).fontColor($r('app.color.plan_text_secondary'))
                 Blank()
-                Text(this.activePlan.completedDays.toString() + '/' + this.activePlan.durationDays.toString() + '天')
+                Text(this.activePlan.completedDays.toString() + '/' + this.activePlan.durationDays.toString())
+                  .fontSize(12).fontColor($r('app.color.text_white'))
+                Text($r('app.string.unit_day'))
                   .fontSize(12).fontColor($r('app.color.text_white'))
               }.width('100%')
               Progress({ value: this.activePlan.progress, total: 100, type: ProgressType.Linear })
@@ -199,9 +250,13 @@ export struct Home {
                     .fontWeight(FontWeight.Bold)
 
                   Row({ space: 6 }) {
-                    Text(item.duration.toString() + '分钟')
+                    Text(item.duration.toString())
                       .fontSize(12).fontColor($r('app.color.text_gray'))
-                    Text(item.calories.toString() + '千卡')
+                    Text($r('app.string.unit_min'))
+                      .fontSize(12).fontColor($r('app.color.text_gray'))
+                    Text(item.calories.toString())
+                      .fontSize(12).fontColor($r('app.color.text_gray'))
+                    Text($r('app.string.unit_kcal'))
                       .fontSize(12).fontColor($r('app.color.text_gray'))
                   }
 
@@ -216,13 +271,26 @@ export struct Home {
                 .alignItems(HorizontalAlign.Start)
                 .margin({ left: 10 })
 
-                Button($r('app.string.start_button'))
-                  .fontSize(12)
-                  .height(28)
-                  .onClick(() => {
-                    let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories);
-                    this.router.push(RouterKey.ACTIVE_TRAINING, param);
-                  })
+                Column({ space: 4 }) {
+                  Button($r('app.string.watch_video_btn'))
+                    .fontSize(12)
+                    .height(28)
+                    .backgroundColor(Color.White)
+                    .fontColor($r('app.color.primary_blue'))
+                    .border({ width: 1, color: $r('app.color.primary_blue') })
+                    .onClick(() => {
+                      let videoParam: VideoParam = new VideoParam(item.title, item.videoUrl, item.id);
+                      this.router.push(RouterKey.VIDEO_PLAYER, videoParam);
+                    })
+                  Button($r('app.string.start_button'))
+                    .fontSize(12)
+                    .height(28)
+                    .onClick(() => {
+                      hilog.info(HOME_DOMAIN, HOME_TAG, '首页开始训练 - courseId: %{public}d, title: %{public}s', item.id, item.title);
+                      let param: SportParam = new SportParam(item.id, item.title, item.duration, item.calories, item.videoUrl);
+                      this.router.push(RouterKey.ACTIVE_TRAINING, param);
+                    })
+                }
               }
               .padding(10)
               .backgroundColor(Color.White)

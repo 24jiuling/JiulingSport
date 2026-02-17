@@ -14,6 +14,25 @@ export struct ManualRecordPage {
   @State isSubmitted: boolean = false;
   private exerciseTypes: string[] = ['跑步', '游泳', '骑行', '跳绳', '球类', '舞蹈', '登山', '其他'];
 
+  getExerciseTypeDisplayName(type: string): ResourceStr {
+    if (type === '跑步') {
+      return $r('app.string.exercise_type_run');
+    } else if (type === '游泳') {
+      return $r('app.string.exercise_type_swim');
+    } else if (type === '骑行') {
+      return $r('app.string.exercise_type_cycle');
+    } else if (type === '跳绳') {
+      return $r('app.string.exercise_type_rope');
+    } else if (type === '球类') {
+      return $r('app.string.exercise_type_ball');
+    } else if (type === '舞蹈') {
+      return $r('app.string.exercise_type_dance');
+    } else if (type === '登山') {
+      return $r('app.string.exercise_type_hiking');
+    }
+    return $r('app.string.exercise_type_other');
+  }
+
   build() {
     NavDestination() {
       Column() {
@@ -30,7 +49,13 @@ export struct ManualRecordPage {
             Text('✅').fontSize(64)
             Text($r('app.string.record_saved_success'))
               .fontSize(20).fontWeight(FontWeight.Bold)
-            Text(this.exerciseType + ' · ' + this.durationMinutes + '分钟 · ' + this.caloriesBurned + '千卡')
+            Text(this.exerciseType + ' · ' + this.durationMinutes)
+              .fontSize(14).fontColor($r('app.color.text_gray'))
+            Text($r('app.string.duration_unit_join'))
+              .fontSize(14).fontColor($r('app.color.text_gray'))
+            Text(this.caloriesBurned)
+              .fontSize(14).fontColor($r('app.color.text_gray'))
+            Text($r('app.string.calories_unit_suffix'))
               .fontSize(14).fontColor($r('app.color.text_gray'))
             Button($r('app.string.back_text')).width('60%').height(44)
               .onClick(() => { this.router.pop(); })
@@ -44,7 +69,7 @@ export struct ManualRecordPage {
                   .fontSize(16).fontWeight(FontWeight.Bold)
                 Flex({ wrap: FlexWrap.Wrap }) {
                   ForEach(this.exerciseTypes, (type: string) => {
-                    Text(type)
+                    Text(this.getExerciseTypeDisplayName(type))
                       .fontSize(14)
                       .fontColor(this.exerciseType === type ? $r('app.color.text_white') : $r('app.color.primary_blue'))
                       .backgroundColor(this.exerciseType === type ? $r('app.color.primary_blue') : Color.White)
@@ -63,7 +88,7 @@ export struct ManualRecordPage {
                 Text($r('app.string.duration_input_label'))
                   .fontSize(16).fontWeight(FontWeight.Bold)
                 Row() {
-                  TextInput({ placeholder: '请输入时长' })
+                  TextInput({ placeholder: getContext(this).resourceManager.getStringSync($r('app.string.duration_placeholder')) })
                     .type(InputType.Number).layoutWeight(1).height(44)
                     .onChange((value: string) => { this.durationMinutes = value; })
                   Text($r('app.string.unit_min')).fontSize(14).margin({ left: 8 })
@@ -77,7 +102,7 @@ export struct ManualRecordPage {
                 Text($r('app.string.calories_input_label'))
                   .fontSize(16).fontWeight(FontWeight.Bold)
                 Row() {
-                  TextInput({ placeholder: '请输入消耗卡路里' })
+                  TextInput({ placeholder: getContext(this).resourceManager.getStringSync($r('app.string.calories_placeholder')) })
                     .type(InputType.Number).layoutWeight(1).height(44)
                     .onChange((value: string) => { this.caloriesBurned = value; })
                   Text($r('app.string.unit_kcal')).fontSize(14).margin({ left: 8 })
@@ -90,7 +115,7 @@ export struct ManualRecordPage {
               Column({ space: 8 }) {
                 Text($r('app.string.notes_label'))
                   .fontSize(16).fontWeight(FontWeight.Bold)
-                TextInput({ placeholder: '可选：添加备注' })
+                TextInput({ placeholder: getContext(this).resourceManager.getStringSync($r('app.string.notes_placeholder')) })
                   .width('100%').height(44)
                   .onChange((value: string) => { this.notes = value; })
               }.width('100%').padding(16).backgroundColor(Color.White).borderRadius(12)

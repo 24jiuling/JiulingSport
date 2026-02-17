@@ -1,5 +1,10 @@
 
 import { User, Goal, CheckInRecord } from 'lib_entity';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import { StorageKey } from 'appscopecommon';
+
+const LOG_TAG: string = 'UserService';
+const DOMAIN_ID: number = 0x0000;
 
 export class UserService {
   private static instance: UserService;
@@ -26,11 +31,15 @@ export class UserService {
     user.totalCalories = 1500;
     user.consecutiveDays = 5;
     this.currentUser = user;
+    // 从持久化恢复打卡状态
+    this.restoreCheckInState();
     return user;
   }
 
   // --- 华为账号登录 ---
   loginWithHuaweiAccount(unionID: string, openID: string, authCode: string | undefined): User {
+    hilog.info(DOMAIN_ID, LOG_TAG,
+      `[DEBUG] loginWithHuaweiAccount called - unionID: ${unionID}, openID: ${openID}, hasAuthCode: ${authCode !== undefined && authCode !== ''}`);
     let user = new User(Date.now(), '华为用户', '');
     user.unionID = unionID;
     user.openID = openID;
@@ -41,7 +50,11 @@ export class UserService {
     user.totalCalories = 0;
     user.consecutiveDays = 0;
     this.currentUser = user;
+    // 从持久化恢复打卡状态
+    this.restoreCheckInState();
     this.notifyLoginStateChanged();
+    hilog.info(DOMAIN_ID, LOG_TAG,
+      `[DEBUG] loginWithHuaweiAccount completed - userId: ${user.id}, isLoggedIn: ${user.isLoggedIn}`);
     return user;
   }
 
@@ -78,7 +91,7 @@ export class UserService {
 
   // --- 通知登录状态变化（驱动 UI 响应式更新） ---
   private notifyLoginStateChanged(): void {
-    AppStorage.setOrCreate('userLoginState', Date.now());
+    AppStorage.setOrCreate(StorageKey.USER_LOGIN_STATE, Date.now());
   }
 
   // --- 设定健身目标 ---
@@ -106,6 +119,8 @@ export class UserService {
   // --- 每日打卡 ---
   checkIn(): CheckInRecord {
     let today = this.getTodayString();
+    hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] checkIn called - today: %{public}s, lastCheckInDate: %{public}s',
+      today, this.currentUser !== null ? this.currentUser.lastCheckInDate : 'null');
     let record = new CheckInRecord(this.nextCheckInId, this.currentUser !== null ? this.currentUser.id : 0, today);
     this.nextCheckInId = this.nextCheckInId + 1;
     this.checkInRecords.push(record);
@@ -116,8 +131,41 @@ export class UserService {
         this.currentUser.consecutiveDays = 1;
       }
       this.currentUser.lastCheckInDate = today;
+      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] checkIn done - lastCheckInDate: %{public}s, consecutiveDays: %{public}d',
+        this.currentUser.lastCheckInDate, this.currentUser.consecutiveDays);
+      // 持久化保存打卡日期和连续天数
+      this.persistCheckInState();
     }
+    // 通知UI刷新（驱动 @StorageProp 监听）
+    this.notifyLoginStateChanged();
     return record;
+  }
+
+  // --- 持久化保存打卡状态 ---
+  private persistCheckInState(): void {
+    if (this.currentUser !== null) {
+      AppStorage.setOrCreate(StorageKey.LAST_CHECK_IN_DATE, this.currentUser.lastCheckInDate);
+      AppStorage.setOrCreate(StorageKey.CONSECUTIVE_DAYS, this.currentUser.consecutiveDays);
+      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] persistCheckInState - saved lastCheckInDate: %{public}s, consecutiveDays: %{public}d',
+        this.currentUser.lastCheckInDate, this.currentUser.consecutiveDays);
+    }
+  }
+
+  // --- 从持久化存储恢复打卡状态 ---
+  restoreCheckInState(): void {
+    if (this.currentUser === null) {
+      hilog.warn(DOMAIN_ID, LOG_TAG, '[DEBUG] restoreCheckInState - currentUser is null, skip');
+      return;
+    }
+    let savedDate: string = AppStorage.get<string>(StorageKey.LAST_CHECK_IN_DATE) ?? '';
+    let savedDays: number = AppStorage.get<number>(StorageKey.CONSECUTIVE_DAYS) ?? 0;
+    hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] restoreCheckInState - savedDate: %{public}s, savedDays: %{public}d',
+      savedDate, savedDays);
+    if (savedDate.length > 0) {
+      this.currentUser.lastCheckInDate = savedDate;
+      this.currentUser.consecutiveDays = savedDays;
+      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] restoreCheckInState - restored successfully');
+    }
   }
 
   // --- 获取今日日期字符串 ---

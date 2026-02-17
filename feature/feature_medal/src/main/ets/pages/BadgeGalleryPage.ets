@@ -94,8 +94,12 @@ export struct BadgeGalleryPage {
               Text(this.selectedBadge.unlockCondition)
                 .fontSize(13).fontColor($r('app.color.primary_blue'))
               if (this.selectedBadge.isUnlocked) {
-                Text('解锁日期：' + this.selectedBadge.unlockDate)
-                  .fontSize(12).fontColor($r('app.color.text_gray'))
+                Row() {
+                  Text($r('app.string.unlock_date_prefix'))
+                    .fontSize(12).fontColor($r('app.color.text_gray'))
+                  Text(this.selectedBadge.unlockDate)
+                    .fontSize(12).fontColor($r('app.color.text_gray'))
+                }
               }
               Button($r('app.string.close_btn'))
                 .width('60%').height(36)
@@ -105,7 +109,7 @@ export struct BadgeGalleryPage {
             .shadow({ radius: 16, color: $r('app.color.shadow_color_dark'), offsetY: 4 })
           }
           .width('100%').height('100%')
-          .backgroundColor('#80000000')
+          .backgroundColor($r('app.color.dialog_overlay'))
           .justifyContent(FlexAlign.Center)
           .position({ x: 0, y: 0 })
           .onClick(() => { this.showDetail = false; })

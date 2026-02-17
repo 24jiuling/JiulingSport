@@ -29,7 +29,7 @@ export struct GoalSettingPage {
                   Text(this.getGoalIcon(goal)).fontSize(32)
                 }.width(60)
                 Column({ space: 4 }) {
-                  Text(goal).fontSize(18).fontWeight(FontWeight.Bold)
+                  Text(this.getGoalDisplayName(goal)).fontSize(18).fontWeight(FontWeight.Bold)
                   Text(this.getGoalDescription(goal))
                     .fontSize(13).fontColor($r('app.color.text_gray'))
                 }.layoutWeight(1).alignItems(HorizontalAlign.Start)
@@ -74,12 +74,21 @@ export struct GoalSettingPage {
     return '🏃';
   }
 
-  getGoalDescription(goal: string): string {
+  getGoalDisplayName(goal: string): ResourceStr {
     if (goal === '减脂') {
-      return '通过有氧运动和HIIT训练减少体脂';
+      return $r('app.string.goal_lose_fat_label');
     } else if (goal === '增肌') {
-      return '通过力量训练增加肌肉量和力量';
+      return $r('app.string.goal_gain_muscle_label');
     }
-    return '通过持续训练提升心肺功能和耐力';
+    return $r('app.string.goal_endurance_label');
+  }
+
+  getGoalDescription(goal: string): ResourceStr {
+    if (goal === '减脂') {
+      return $r('app.string.goal_desc_lose_fat');
+    } else if (goal === '增肌') {
+      return $r('app.string.goal_desc_gain_muscle');
+    }
+    return $r('app.string.goal_desc_endurance');
   }
 }

@@ -9,6 +9,7 @@ import { ActiveTrainingPage, ManualRecordPage, SportParam } from 'feature_sport'
 import { BadgeGalleryPage } from 'feature_medal';
 import { ExerciseHistoryPage, LoginPage, SilentLoginHelper } from 'feature_log';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { Course } from 'lib_entity';
 
 
 @Entry
@@ -35,18 +36,18 @@ struct Index {
         .fontColor(this.currentIndex === index ? $r('app.color.primary_blue') : $r('app.color.text_light_gray'))
         .fontSize(12)
         .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
-        .margin({ top: 5 })
     }
     .justifyContent(FlexAlign.Center)
     .width('100%')
-    .height('100%')
+    .height(40) // 强制构建器高度为 40
   }
 
   @Builder pageMap(name: string, param: Object) {
     if (name === RouterKey.VIDEO_PLAYER && param instanceof VideoParam) {
       VideoPlayerPage({
         title: (param as VideoParam).title,
-        videoUrl: (param as VideoParam).videoUrl
+        videoUrl: (param as VideoParam).videoUrl,
+        courseId: (param as VideoParam).courseId
       })
     } else if (name === RouterKey.LOGIN) {
       LoginPage()
@@ -63,7 +64,16 @@ struct Index {
         courseId: (param as SportParam).courseId,
         courseTitle: (param as SportParam).courseTitle,
         courseCalories: (param as SportParam).courseCalories,
-        courseDuration: (param as SportParam).courseDuration
+        courseDuration: (param as SportParam).courseDuration,
+        courseVideoUrl: (param as SportParam).courseVideoUrl
+      })
+    } else if (name === RouterKey.ACTIVE_TRAINING && param instanceof Course) {
+      ActiveTrainingPage({
+        courseId: (param as Course).id,
+        courseTitle: (param as Course).title,
+        courseCalories: (param as Course).calories,
+        courseDuration: (param as Course).duration,
+        courseVideoUrl: (param as Course).videoUrl
       })
     } else if (name === RouterKey.MANUAL_RECORD) {
       ManualRecordPage()
@@ -95,16 +105,19 @@ struct Index {
       }
       .vertical(false)
       .barMode(BarMode.Fixed)
-      .barWidth('100%')
-      .barHeight(56)
+      .barHeight(56) // 恢复标准高度
+      .barBackgroundColor(Color.White) // 恢复白色背景，或者保留灰色
       .animationDuration(200)
       .onChange((index: number) => {
         this.currentIndex = index;
       })
+      .height('100%')
       .backgroundColor(Color.White)
     }
     .width('100%')
     .height('100%')
+    .hideTitleBar(true)
+    .hideToolBar(true)
     .navDestination(this.pageMap)
     .mode(NavigationMode.Stack)
   }

@@ -2,6 +2,11 @@
 import { Course } from 'lib_entity';
 import { FitnessService } from 'lib_api';
 import { RouterManager } from 'lib_router';
+import promptAction from '@ohos.promptAction';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const CREATE_PLAN_TAG: string = 'CreatePlanPage';
+const CREATE_PLAN_DOMAIN: number = 0x0000;
 
 @Component
 export struct CreatePlanPage {
@@ -15,8 +20,19 @@ export struct CreatePlanPage {
   private goalOptions: string[] = ['减脂', '增肌', '提升耐力'];
   private durationOptions: number[] = [7, 14, 28, 42];
 
+  getGoalDisplayName(goal: string): ResourceStr {
+    if (goal === '减脂') {
+      return $r('app.string.goal_lose_fat_label');
+    } else if (goal === '增肌') {
+      return $r('app.string.goal_gain_muscle_label');
+    }
+    return $r('app.string.goal_endurance_label');
+  }
+
   aboutToAppear() {
+    hilog.info(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, 'aboutToAppear - 加载所有课程');
     this.allCourses = this.service.getAllCourses();
+    hilog.info(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, '课程加载完成, 数量: %{public}d', this.allCourses.length);
   }
 
   build() {
@@ -35,7 +51,7 @@ export struct CreatePlanPage {
             Column({ space: 8 }) {
               Text($r('app.string.plan_name_label'))
                 .fontSize(16).fontWeight(FontWeight.Bold)
-              TextInput({ placeholder: '请输入计划名称' })
+              TextInput({ placeholder: getContext(this).resourceManager.getStringSync($r('app.string.plan_name_placeholder')) })
                 .width('100%').height(44)
                 .onChange((value: string) => { this.planName = value; })
             }.width('100%').padding(16).backgroundColor(Color.White).borderRadius(12)
@@ -46,7 +62,7 @@ export struct CreatePlanPage {
                 .fontSize(16).fontWeight(FontWeight.Bold)
               Row({ space: 8 }) {
                 ForEach(this.goalOptions, (goal: string) => {
-                  Text(goal)
+                  Text(this.getGoalDisplayName(goal))
                     .fontSize(14)
                     .fontColor(this.selectedGoal === goal ? $r('app.color.text_white') : $r('app.color.primary_blue'))
                     .backgroundColor(this.selectedGoal === goal ? $r('app.color.primary_blue') : Color.White)
@@ -65,9 +81,14 @@ export struct CreatePlanPage {
                 .fontSize(16).fontWeight(FontWeight.Bold)
               Row({ space: 8 }) {
                 ForEach(this.durationOptions, (days: number) => {
-                  Text(days.toString() + '天')
-                    .fontSize(14)
-                    .fontColor(this.durationDays === days ? $r('app.color.text_white') : $r('app.color.primary_blue'))
+                  Row() {
+                    Text(days.toString())
+                      .fontSize(14)
+                      .fontColor(this.durationDays === days ? $r('app.color.text_white') : $r('app.color.primary_blue'))
+                    Text($r('app.string.unit_day'))
+                      .fontSize(14)
+                      .fontColor(this.durationDays === days ? $r('app.color.text_white') : $r('app.color.primary_blue'))
+                  }
                     .backgroundColor(this.durationDays === days ? $r('app.color.primary_blue') : Color.White)
                     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
                     .borderRadius(20)
@@ -86,7 +107,13 @@ export struct CreatePlanPage {
                 Row() {
                   Column({ space: 2 }) {
                     Text(course.title).fontSize(15).fontWeight(FontWeight.Medium)
-                    Text(course.duration.toString() + '分钟 · ' + course.calories.toString() + '千卡')
+                    Text(course.duration.toString())
+                      .fontSize(12).fontColor($r('app.color.text_gray'))
+                    Text($r('app.string.duration_unit_join'))
+                      .fontSize(12).fontColor($r('app.color.text_gray'))
+                    Text(course.calories.toString())
+                      .fontSize(12).fontColor($r('app.color.text_gray'))
+                    Text($r('app.string.calories_unit_suffix'))
                       .fontSize(12).fontColor($r('app.color.text_gray'))
                   }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                   Checkbox()
@@ -104,10 +131,18 @@ export struct CreatePlanPage {
             // 创建按钮
             Button($r('app.string.create_plan_confirm'))
               .width('100%').height(48).margin({ top: 8 })
-              .enabled(this.planName.length > 0 && this.selectedCourseIds.length > 0)
               .onClick(() => {
+                hilog.info(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, '点击创建计划 - planName: %{public}s, goal: %{public}s, days: %{public}d, courses: %{public}d',
+                  this.planName, this.selectedGoal, this.durationDays, this.selectedCourseIds.length);
+                if (this.planName.length === 0 || this.selectedCourseIds.length === 0) {
+                  hilog.warn(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, '计划信息不完整 - planName为空: %{public}s, courses为空: %{public}s',
+                    (this.planName.length === 0).toString(), (this.selectedCourseIds.length === 0).toString());
+                  promptAction.showToast({ message: getContext(this).resourceManager.getStringSync($r('app.string.plan_info_incomplete_hint')) });
+                  return;
+                }
                 this.service.createCustomPlan(this.planName, this.selectedGoal,
                   this.durationDays, this.selectedCourseIds);
+                hilog.info(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, '计划创建成功, 返回上一页');
                 this.router.pop();
               })
           }.padding(16)
@@ -126,6 +161,7 @@ export struct CreatePlanPage {
   }
 
   toggleCourse(courseId: number, checked: boolean): void {
+    hilog.info(CREATE_PLAN_DOMAIN, CREATE_PLAN_TAG, '切换课程选择 - courseId: %{public}d, checked: %{public}s', courseId, checked.toString());
     if (checked) {
       if (!this.isCourseSelected(courseId)) {
         let newIds: number[] = [];

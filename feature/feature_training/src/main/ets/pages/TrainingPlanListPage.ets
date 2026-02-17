@@ -63,7 +63,10 @@ export struct TrainingPlanListPage {
                     .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                     .borderRadius(8).backgroundColor($r('app.color.status_ongoing_bg'))
                   Blank()
-                  Text(plan.durationDays.toString() + '天').fontSize(12).fontColor($r('app.color.text_gray'))
+                  Text(plan.durationDays.toString())
+                    .fontSize(12).fontColor($r('app.color.text_gray'))
+                  Text($r('app.string.unit_day'))
+                    .fontSize(12).fontColor($r('app.color.text_gray'))
                 }.width('100%')
 
                 if (plan.status === 'ongoing') {
@@ -105,12 +108,12 @@ export struct TrainingPlanListPage {
     return result;
   }
 
-  getStatusText(status: string): string {
+  getStatusText(status: string): ResourceStr {
     if (status === 'ongoing') {
-      return '进行中';
+      return $r('app.string.status_ongoing');
     } else if (status === 'completed') {
-      return '已完成';
+      return $r('app.string.status_completed');
     }
-    return '未开始';
+    return $r('app.string.status_not_started');
   }
 }

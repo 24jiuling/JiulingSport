@@ -6,11 +6,11 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "C:/Users/34484/.ohos/config/default_JiulingSport_ojl3f-YIR4sYmoJiUWTqT1cJYe1QBHje83LFCn8FtfI=.p12",
-          "storePassword": "0000001B69954A11EADD4BA04F401A1A8B3BB16F939DE2EC2FB072680285512A23F842CD376060FDD9F682",
+          "storePassword": "0000001B6CF28CEF874804D5DD6E25C9811107C592F94A56EA62ACA63026C4A9E7C7368680889C15C72CCE",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BB9B3162E68F8CCE0B5589AAF61A0233AEBD9D9DEF0B5B64DD42ABD37751AFDCB29957623637757",
+          "keyPassword": "0000001BDEEB9C51EC98D682E0B71AFBE04EE207FC6484FC7F1A4956ABAF7267865AE58E2BE79470C44A56",
           "signAlg": "SHA256withECDSA",
-          "profile": "D:/hm/JiulingSport/profileDebug.p7b",
+          "profile": "D:/hm/key/auto_debugDebug.p7b",
           "certpath": "C:/Users/34484/.ohos/config/default_JiulingSport_ojl3f-YIR4sYmoJiUWTqT1cJYe1QBHje83LFCn8FtfI=.cer"
         }
       }
@@ -91,6 +91,10 @@
     {
       "name": "feature_medal",
       "srcPath": "./feature/feature_medal",
+    },
+    {
+      "name": "lib_utils",
+      "srcPath": "./common/lib_utils",
     }
   ]
 }
