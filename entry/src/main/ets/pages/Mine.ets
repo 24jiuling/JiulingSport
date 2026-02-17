@@ -207,11 +207,7 @@ export struct Mine {
               this.router.push(RouterKey.GOAL_SETTING);
             })
             this.MenuItem($r('app.string.menu_multi_device'), () => {
-              if (this.isLoggedIn) {
-                AlertDialog.show({ message: getContext(this).resourceManager.getStringSync($r('app.string.multi_device_sync_logged_in')) });
-              } else {
-                AlertDialog.show({ message: getContext(this).resourceManager.getStringSync($r('app.string.multi_device_sync_not_logged_in')) });
-              }
+              this.router.push(RouterKey.MULTI_DEVICE_SYNC);
             })
             this.MenuItem($r('app.string.menu_settings'), () => {
               // 设置页面占位

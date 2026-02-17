@@ -161,7 +161,7 @@ export struct VideoPlayerPage {
         if (this.isLocalVideo()) {
           Video({ src: $rawfile(this.videoUrl), controller: this.videoController })
             .width('100%')
-            .height(220)
+            .aspectRatio(16 / 9)
             .autoPlay(false)
             .controls(true)
             .onPrepared((event) => {

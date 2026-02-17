@@ -8,6 +8,7 @@ import { TrainingPlanListPage, PlanDetailPage, CreatePlanPage, TrainingParam } f
 import { ActiveTrainingPage, ManualRecordPage, SportParam } from 'feature_sport';
 import { BadgeGalleryPage } from 'feature_medal';
 import { ExerciseHistoryPage, LoginPage, SilentLoginHelper } from 'feature_log';
+import { MultiDeviceSyncPage } from './MultiDeviceSyncPage';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Course } from 'lib_entity';
 
@@ -81,6 +82,8 @@ struct Index {
       BadgeGalleryPage()
     } else if (name === RouterKey.EXERCISE_HISTORY) {
       ExerciseHistoryPage()
+    } else if (name === RouterKey.MULTI_DEVICE_SYNC) {
+      MultiDeviceSyncPage()
     }
   }
 

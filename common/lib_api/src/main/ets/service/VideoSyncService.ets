@@ -155,12 +155,87 @@ export class VideoSyncService {
       return false;
     }
     try {
-      // autoSync已设置为true，数据会自动同步
-      // 此方法用于需要手动触发的场景
-      hilog.info(0x0000, TAG, 'Data sync triggered (autoSync is enabled)');
+      // 使用 PUSH_PULL 模式同步所有网络设备
+      this.kvStore.sync([], distributedKVStore.SyncMode.PUSH_PULL, 1000);
+      hilog.info(0x0000, TAG, 'Data sync triggered with PUSH_PULL mode');
       return true;
     } catch (e) {
       hilog.error(0x0000, TAG, 'Failed to sync data: %{public}s', JSON.stringify(e));
+      // autoSync 已启用，即使手动同步失败也不影响自动同步
+      return false;
+    }
+  }
+
+  // 获取所有已保存的视频播放进度
+  async getAllProgress(): Promise<VideoPlayProgress[]> {
+    if (this.kvStore === null) {
+      hilog.warn(0x0000, TAG, 'KV Store not initialized, cannot get all progress');
+      return [];
+    }
+    try {
+      let resultSet: distributedKVStore.KVStoreResultSet =
+        await this.kvStore.getResultSet(PROGRESS_KEY_PREFIX);
+      let progressList: VideoPlayProgress[] = [];
+      while (resultSet.moveToNext()) {
+        let entry: distributedKVStore.Entry = resultSet.getEntry();
+        let valueStr: string = entry.value.value as string;
+        if (valueStr.length > 0) {
+          let progress: VideoPlayProgress = VideoPlayProgress.fromJsonString(valueStr);
+          progressList.push(progress);
+        }
+      }
+      this.kvStore.closeResultSet(resultSet);
+      hilog.info(0x0000, TAG, 'All progress loaded, count: %{public}d', progressList.length);
+      return progressList;
+    } catch (e) {
+      hilog.error(0x0000, TAG, 'Failed to get all progress: %{public}s', JSON.stringify(e));
+      return [];
+    }
+  }
+
+  // 模拟远端设备写入数据（用于演示/测试同步逻辑）
+  async simulateRemoteSync(courseId: number, videoTitle: string, position: number, duration: number): Promise<boolean> {
+    if (this.kvStore === null) {
+      hilog.warn(0x0000, TAG, 'KV Store not initialized, cannot simulate sync');
+      return false;
+    }
+    try {
+      let progress: VideoPlayProgress = new VideoPlayProgress(courseId, 'simulated_video.mp4', videoTitle);
+      progress.currentPosition = position;
+      progress.totalDuration = duration;
+      progress.deviceInfo = '模拟远端设备 (HUAWEI MatePad)';
+      progress.lastUpdated = Date.now();
+      let key: string = PROGRESS_KEY_PREFIX + courseId.toString();
+      let value: string = progress.toJsonString();
+      await this.kvStore.put(key, value);
+      hilog.info(0x0000, TAG, 'Simulated remote sync: course %{public}d at position %{public}d', courseId, position);
+      return true;
+    } catch (e) {
+      hilog.error(0x0000, TAG, 'Failed to simulate remote sync: %{public}s', JSON.stringify(e));
+      return false;
+    }
+  }
+
+  // 清空所有同步数据
+  async clearAllProgress(): Promise<boolean> {
+    if (this.kvStore === null) {
+      return false;
+    }
+    try {
+      let resultSet: distributedKVStore.KVStoreResultSet =
+        await this.kvStore.getResultSet(PROGRESS_KEY_PREFIX);
+      let keys: string[] = [];
+      while (resultSet.moveToNext()) {
+        keys.push(resultSet.getEntry().key);
+      }
+      this.kvStore.closeResultSet(resultSet);
+      for (let i = 0; i < keys.length; i++) {
+        await this.kvStore.delete(keys[i]);
+      }
+      hilog.info(0x0000, TAG, 'All progress cleared, count: %{public}d', keys.length);
+      return true;
+    } catch (e) {
+      hilog.error(0x0000, TAG, 'Failed to clear all progress: %{public}s', JSON.stringify(e));
       return false;
     }
   }

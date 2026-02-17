@@ -9,4 +9,5 @@ export class RouterKey {
   static MANUAL_RECORD: string = 'manual_record';
   static BADGE_GALLERY: string = 'badge_gallery';
   static EXERCISE_HISTORY: string = 'exercise_history';
+  static MULTI_DEVICE_SYNC: string = 'multi_device_sync';
 }

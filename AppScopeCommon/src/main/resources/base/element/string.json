@@ -182,7 +182,8 @@
     { "name": "sync_current_device", "value": "当前设备" },
     { "name": "sync_seeked_prefix", "value": "已跳转到同步位置：" },
     { "name": "sync_play_complete", "value": "播放完成，进度已同步" },
-    { "name": "weekday_rest", "value": "休" }
+    { "name": "weekday_rest", "value": "休" },
+    { "name": "menu_multi_device_sync_page", "value": "多端同步管理" }
 
   ]
 }
