@@ -2,7 +2,9 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { UserService } from 'lib_api';
 import { RouterManager, RouterKey } from 'lib_router';
-import auth, { SignInParam, SignInResult } from '@hw-agconnect/auth';
+import auth, { SignInParam, SignInResult, TokenResult } from '@hw-agconnect/auth';
+import { loginComponentManager } from '@kit.AccountKit';
+
 
 const LOG_TAG: string = 'LoginPage';
 const DOMAIN_ID: number = 0x0000;
@@ -11,9 +13,7 @@ const DOMAIN_ID: number = 0x0000;
 export struct LoginPage {
   private userService: UserService = UserService.getInstance();
   private router: RouterManager = RouterManager.getInstance();
-
   @State isSelected: boolean = false;
-  @State isLoading: boolean = false;
 
   // 协议弹框
   agreementDialog: CustomDialogController = new CustomDialogController({
@@ -50,38 +50,11 @@ export struct LoginPage {
    * AGC SDK 会自动拉起华为账号授权界面
    */
   private doHuaweiSignIn(): void {
-    if (this.isLoading) {
+    if (this.userService.isLoggedIn()) {
       return;
     }
-    this.isLoading = true;
     hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] doHuaweiSignIn - 开始 AGC 华为账号登录...');
-
-    auth.signIn({
-      autoCreateUser: true,
-      credentialInfo: {
-        kind: 'hwid'
-      }
-    } as SignInParam).then((signInResult: SignInResult) => {
-      const user = signInResult.getUser();
-      hilog.info(DOMAIN_ID, LOG_TAG,
-        `[DEBUG] signIn success! uid: ${user.getUid()}, displayName: ${user.getDisplayName()}`);
-
-      // 登录成功，更新本地用户服务
-      this.userService.loginWithHuaweiAccount(user.getUid(), user.getUid(), '');
-      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] loginWithHuaweiAccount completed, navigating to GOAL_SETTING.');
-      this.router.replace(RouterKey.GOAL_SETTING);
-
-      this.isLoading = false;
-    }).catch((error: BusinessError) => {
-      hilog.error(DOMAIN_ID, LOG_TAG,
-        `[DEBUG] signIn error, Code: ${error.code}, Message: ${error.message}`);
-      this.isLoading = false;
-
-      // 用户取消不提示
-      if (error.code !== 2) {
-        AlertDialog.show({ message: `华为账号登录失败(${error.code})：${error.message}` });
-      }
-    });
+    this.userService.login()
   }
 
   build() {
@@ -125,7 +98,7 @@ export struct LoginPage {
                 .backgroundColor('#CE0E2D')
                 .fontColor(Color.White)
                 .fontSize(16)
-                .enabled(!this.isLoading)
+                .enabled(!this.userService.isLoggedIn())
                 .onClick(() => {
                   this.onLoginClick();
                 })

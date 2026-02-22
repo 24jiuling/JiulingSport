@@ -220,3 +220,120 @@ Text('用户协议')
   .onClick(() => {
     openUrl('https://developer.huawei.com/consumer/cn/doc/');
   })
+
+## 前端工程约定（ViewModel / lib_api / ApiUrls / StorageKey / Entity）
+
+本文档概述了在本工程中对前端层（ArkTS/ETS）的约定：如何拆分页面逻辑、统一后端 API 调用、管理 URL、持久化 key 和实体类组织。
+
+1) ViewModel 层
+- 所有页面中的调用逻辑（网络请求、第三方 SDK 交互、复杂业务逻辑）应从 `build()`/组件中提取到对应页面的 `ViewModel` 类中。
+- 位置示例：`feature/<feature_name>/src/main/ets/viewmodel/<Page>ViewModel.ets`。
+- `ViewModel` 只负责业务逻辑和数据处理，不直接操作 UI 布局。页面通过调用 `ViewModel` 的方法并根据返回结果或回调更新 `@State`。
+
+2) lib_api
+- 所有对后端的 HTTP 请求应由 `common/lib_api` 中的 API 封装实现（如 `AuthApi`、`UserApi` 等），页面或 `ViewModel` 只调用 `lib_api` 暴露的方法。
+- 位置示例：`common/lib_api/src/main/ets/service/AuthApi.ets`。
+- `lib_api` 内部可以使用统一的 `ApiUrls` 常量类构造 URL。
+
+3) ApiUrls
+- 所有后端 url 地址集中管理在一个类中（例如 `ApiUrls`），便于在不同环境下切换基线地址。
+- 位置示例：`common/lib_api/src/main/ets/service/ApiUrls.ets`。
+
+4) 实体类组织规范
+- **统一存放位置**：所有实体类都应放到 `common/lib_entity` 模块中
+- **包结构组织**：在 `lib_entity/src/main/ets/entity/` 目录下，按照接口功能建立对应的包
+- **命名规范**：每个接口建立对应的包，包中存放该接口所需要的实体类
+- **类定义方式**：实体类采用 `class` 进行定义和接收
+- **示例结构**：
+  ```
+  lib_entity/
+  └── src/main/ets/entity/
+      ├── auth/                 # 认证相关实体类
+      │   ├── HuaweiLoginRequest.ets
+      │   ├── UserInfo.ets
+      │   └── HuaweiLoginResponse.ets
+      ├── user/                # 用户相关实体类
+      ├── course/              # 课程相关实体类
+      └── ...
+  ```
+
+5) 模块导出与依赖规范
+- **模块导出（Index.ets）**：每个模块必须在其 `Index.ets` 文件中导出对外公共 API（类、函数或常量），以便其它模块通过模块名直接导入。例如，`common/lib_api/Index.ets` 应导出 `UserService`、`FitnessService` 等对外使用的类型。
+- **声明依赖（oh-package.json5）**：如果模块文件中 `import { X } from 'other_module'`，则必须在该模块的 `oh-package.json5` 中把 `other_module` 列为 `dependencies`。这可保证构建工具在打包/解析时能正确解析模块间的引用。
+- **检查与验证**：在新增导出或新增模块间引用后，请运行以下检查命令（在项目根目录 PowerShell 中执行）：
+
+```powershell
+Select-String -Path "**\*.ets" -Pattern "from 'lib_api'|from 'appscopecommon'|from 'lib_entity'" -SimpleMatch
+```
+
+并比对每个 `import` 中使用的模块是否在本模块的 `oh-package.json5` 的 `dependencies` 中列出；同时检查被引用模块的 `Index.ets` 是否包含相应的 `export`。这可以手动执行，也可在 CI 中添加自动化脚本。
+
+示例：如果 `feature_log` 中有 `import { StorageKey } from 'appscopecommon'`，那么 `feature_log/oh-package.json5` 中必须包含 `"appscopecommon": "file:../../AppScopeCommon"`，并且 `AppScopeCommon/Index.ets` 必须导出 `StorageKey`。
+
+## 严格的 ArkTS/ETS 静态检查与修复步骤（必做）
+
+为保证代码在 ArkTS/ETS 环境下可编译通过并符合项目规范，提交 PR 前必须按下列步骤逐项检查并修复：
+
+1) 源码预检查（PowerShell 快速脚本，运行于工程根目录）
+
+```powershell
+# 查找未显式类型的 any/unknown 使用
+Select-String -Path "**\*.ets" -Pattern '\b(any|unknown)\b' -SimpleMatch
+
+# 查找可能的 TextEncoder/TextDecoder 使用（设备或平台可能不支持）
+Select-String -Path "**\*.ets" -Pattern 'TextEncoder|TextDecoder' -SimpleMatch
+
+# 查找 throw 语句（应只 throw Error 实例）
+Select-String -Path "**\*.ets" -Pattern '(^|\s)throw\s+' -SimpleMatch
+
+# 查找模块引用缺失（临时检测，若使用自定义 ohos 模块名请使用对应替换）
+Select-String -Path "**\*.ets" -Pattern "from 'lib_api'|from 'appscopecommon'" -SimpleMatch
+
+# 查找对象字面量直接用于类型初始化的代码（需人工审查）
+Select-String -Path "**\*.ets" -Pattern "= \{[\s\S]*?\}" -AllMatches
+```
+
+2) 必要修复清单（每项需在 PR 描述中列出并说明）
+- 消除 `any` / `unknown`：替换为明确的类或接口类型；若外部模块缺失类型声明，添加模块的 `.d.ts` 最小声明（例如上游 `feature/*/src/main/ets/types.d.ts`）。
+- 模块解析问题：若编译器报 `Cannot find module 'lib_api'`，不要在业务代码里用隐式 any，必须在对应模块下添加类型声明文件或在工程级别维护 typings（已示例：`feature/xxx/src/main/ets/types.d.ts`）。
+- TextEncoder/TextDecoder：ArkTS/目标设备可能不提供，避免直接使用或提供轻量 polyfill（仅在运行环境允许时），并在代码中做能力检测（若不可用则走替代实现）。
+- `throw` 语句：仅使用 `throw new Error('msg')` 或 `throw new SomeError(...)`，不要 `throw` 原始值或未定义对象。
+- 对象字面量：初始化类或接口实例时使用明确类（`new MyClass({...})`）或先构造临时类实例，避免使用纯 untyped object literal。
+
+3) 编译/静态检查（在 DevEco/CI 上执行）
+- 在 DevEco Studio 中运行项目编译（Debug 模式），修复所有编译器和 ArkTSCheck 报错。
+- 在 CI 上加入一步：运行 ArkTS 编译或项目构建命令并阻断含有错误（exit non-zero）。示例（根据项目构建脚本调整）：
+
+```powershell
+# 在 CI 中运行（示例，替换为实际构建命令）
+hpm build || exit 1
+```
+
+4) 类型声明和第三方模块策略
+- 所有对内置/第三方模块（如 `lib_api`, `appscopecommon`, `@hw-agconnect/auth`）的引用必须有对应类型声明；优先做法是由模块提供 `.d.ts`，若无则在项目内为最小暴露 API 添加局部声明文件。
+
+5) PR 模板检查项（在每次 PR 描述里勾选）
+- [ ] 已运行预检查脚本并贴结果摘要。
+- [ ] 已消除 `any` / `unknown` 的使用或说明为什么必须暂时保留。
+- [ ] 所有外部模块类型声明已提交或引用已记录。
+- [ ] 已在 DevEco 或 CI 上成功构建通过。
+
+遵循以上流程能显著减少 ArkTS 编译/运行时错误并满足项目规范要求。
+
+- 发布到生产环境时请改为 HTTPS 并替换为线上域名。
+
+4) 存储 key
+- 所有写入 `AppStorage` / `PersistentStorage` / `StorageProp` 的 key 常量应统一放入 `AppScopeCommon` 的 `StorageKey`（`AppScopeCommon/src/main/ets/appScopeKey/AppScopeKey.ets`）。
+- 例如：`StorageKey.AUTH_TOKEN`、`StorageKey.USER_INFO` 等。
+
+5) 推荐调用流程
+1. 页面点击触发 `onClick` → 调用 `this.viewModel.signIn()`。
+2. `ViewModel` 内部调用 AGC SDK(`auth.signIn()`)，并将拿到的标识/uid 组装为请求参数。
+3. `ViewModel` 调用 `lib_api` 中的 `AuthApi.huaweiLogin(payload)`，统一处理 HTTP 请求与 JSON 解析。
+4. `ViewModel` 根据后端返回结果保存 `StorageKey.AUTH_TOKEN` 到 `AppStorage`（或安全存储），并返回结果给页面。
+5. 页面根据返回结果更新 `UserService` / `@State` 并导航。
+
+6) 注意事项
+- ViewModel 与 lib_api 应尽量返回明确的数据结构（避免页面再做大量字符串解析）。
+- 网络请求统一处理超时、错误码和 JSON 解析异常，`lib_api` 可统一返回 `{ status, data, text }` 结构。
+- 在调试阶段可记录必要日志，但发布前删除或降级敏感日志（避免打印 token/用户敏感信息）。

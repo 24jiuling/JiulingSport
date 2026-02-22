@@ -39,7 +39,7 @@
     { "name": "login_btn", "value": "登录" },
     { "name": "register_btn", "value": "注册" },
     { "name": "or_text", "value": "或" },
-    { "name": "huawei_login_btn", "value": "华为账号一键登录" },
+    { "name": "huawei_login_btn", "value": "华为账号登录" },
     { "name": "goal_setting_title", "value": "设定你的健身目标" },
     { "name": "goal_setting_subtitle", "value": "我们将为你推荐个性化的训练计划" },
     { "name": "goal_confirm_btn", "value": "确认目标" },

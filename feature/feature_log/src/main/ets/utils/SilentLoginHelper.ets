@@ -25,7 +25,13 @@ export class SilentLoginHelper {
       if (cachedUser !== null && cachedUser !== undefined) {
         hilog.info(DOMAIN_ID, LOG_TAG,
           `[DEBUG] AGC Auth cached user found! uid: ${cachedUser.getUid()}, displayName: ${cachedUser.getDisplayName()}`);
-        userService.loginWithHuaweiAccount(cachedUser.getUid(), cachedUser.getUid(), '');
+        try {
+          const tokenResult = await cachedUser.getToken(false);
+          const token = tokenResult.getString();
+          userService.loginWithHuaweiAccount(cachedUser.getUid(), cachedUser.getUid(), token);
+        } catch (e) {
+          hilog.warn(DOMAIN_ID, LOG_TAG, '[WARN] failed to get token from cached user: %{public}s', e);
+        }
         return true;
       }
       hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] No AGC cached user, silent login skipped.');

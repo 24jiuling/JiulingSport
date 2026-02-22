@@ -129,7 +129,7 @@ export default class EntryAbility extends UIAbility {
       controller.executeRequest(authRequest).then((data) => {
         hilog.info(DOMAIN, 'testTag', 'Account Kit AuthorizationRequest 成功! type: %{public}s', typeof data);
         let resp = data as authentication.AuthorizationWithHuaweiIDResponse;
-        hilog.info(DOMAIN, 'testTag', 'Authorization data: unionID=%{public}s, openID=%{public}s',
+        hilog.info(DOMAIN, 'testTag', 'Authorization data: unionId=%{public}s, openId=%{public}s',
           resp?.data?.unionID ?? 'N/A', resp?.data?.openID ?? 'N/A');
       }).catch((err: BusinessError) => {
         hilog.error(DOMAIN, 'testTag',

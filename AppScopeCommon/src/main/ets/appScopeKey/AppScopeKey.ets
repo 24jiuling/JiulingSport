@@ -12,4 +12,8 @@ export class StorageKey {
   static readonly LAST_CHECK_IN_DATE: string = 'lastCheckInDate';
   /** 连续打卡天数 */
   static readonly CONSECUTIVE_DAYS: string = 'consecutiveDays';
+  /** 后端鉴权用 token */
+  static readonly AUTH_TOKEN: string = 'auth_token';
+  /** 序列化的用户信息（JSON） */
+  static readonly USER_INFO: string = 'user_info';
 }

@@ -1,7 +1,13 @@
 
-import { User, Goal, CheckInRecord } from 'lib_entity';
+import { User, Goal, CheckInRecord, HuaweiLoginRequest, HuaweiLoginResponse } from 'lib_entity';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { StorageKey } from 'appscopecommon';
+import { StorageKey, AppStorage } from 'appscopecommon';
+import auth, { SignInParam, SignInResult } from '@hw-agconnect/auth';
+import { BusinessError } from '@kit.BasicServicesKit';
+
+import { RouterKey, RouterManager } from 'lib_router';
+import { LibApi } from '../api/LibApi';
+
 
 const LOG_TAG: string = 'UserService';
 const DOMAIN_ID: number = 0x0000;
@@ -11,6 +17,7 @@ export class UserService {
   private currentUser: User | null = null;
   private checkInRecords: CheckInRecord[] = [];
   private nextCheckInId: number = 1;
+  private router: RouterManager = RouterManager.getInstance();
 
   private constructor() {}
 
@@ -37,39 +44,36 @@ export class UserService {
   }
 
   // --- 华为账号登录 ---
-  loginWithHuaweiAccount(unionID: string, openID: string, authCode: string | undefined): User {
+  loginWithHuaweiAccount(unionId: string, openId: string, authCode: string | undefined): User {
     hilog.info(DOMAIN_ID, LOG_TAG,
-      `[DEBUG] loginWithHuaweiAccount called - unionID: ${unionID}, openID: ${openID}, hasAuthCode: ${authCode !== undefined && authCode !== ''}`);
+      `[DEBUG] loginWithHuaweiAccount called - unionId: ${unionId}, openId: ${openId}, hasAuthCode: ${authCode !== undefined && authCode !== ''}`);
     let user = new User(Date.now(), '华为用户', '');
-    user.unionID = unionID;
-    user.openID = openID;
-    user.authorizationCode = authCode ?? '';
-    user.isLoggedIn = true;
-    user.totalWorkouts = 0;
-    user.totalTime = 0;
-    user.totalCalories = 0;
-    user.consecutiveDays = 0;
+    this.saveUserInfo(user, unionId, openId, authCode);
     this.currentUser = user;
+    // this.backLogin(authCode);
     // 从持久化恢复打卡状态
     this.restoreCheckInState();
     this.notifyLoginStateChanged();
     hilog.info(DOMAIN_ID, LOG_TAG,
-      `[DEBUG] loginWithHuaweiAccount completed - userId: ${user.id}, isLoggedIn: ${user.isLoggedIn}`);
-    return user;
-  }
-
-  // --- 注册 ---
-  register(phone: string, password: string, username: string): User {
-    let user = new User(Date.now(), username, '');
-    user.phone = phone;
-    user.isLoggedIn = true;
-    this.currentUser = user;
+      `[DEBUG] loginWithHuaweiAccount completed - userId: ${user.id}, isLoggedIn: ${user.isLoggedIn},token: ${user.authorizationCode}`);
     return user;
   }
 
   // --- 获取当前用户 ---
   getCurrentUser(): User | null {
     return this.currentUser;
+  }
+
+  // --- 保存用户信息 ---
+  saveUserInfo(user: User, unionId: string, openId: string, authCode: string | undefined): void {
+    user.unionId = unionId;
+    user.openId = openId;
+    user.authorizationCode = authCode ?? '';
+    user.isLoggedIn = true;
+    user.totalWorkouts = 0;
+    user.totalTime = 0;
+    user.totalCalories = 0;
+    user.consecutiveDays = 0;
   }
 
   // --- 检查登录状态 ---
@@ -80,8 +84,97 @@ export class UserService {
     return false;
   }
 
+  // --- 登录 ---
+  login(): void {
+    auth.signIn({
+      autoCreateUser: true,
+      credentialInfo: {
+        kind: 'hwid'
+      }
+    } as SignInParam).then((signInResult: SignInResult) => {
+      const user = signInResult.getUser();
+      hilog.info(DOMAIN_ID, LOG_TAG,
+        `[DEBUG] signIn success! uid: ${user.getUid()}, displayName: ${user.getDisplayName()}`);
+
+      user.getToken(true).then((tokenResult) => {
+        const token = tokenResult.getString();
+        // 登录成功，更新本地用户服务
+        this.loginWithHuaweiAccount(user.getUid(), user.getUid(),token);
+        hilog.info(DOMAIN_ID, LOG_TAG,
+          `[DEBUG] accessToken: ${tokenResult.getString()}`);
+      }).catch((err: Error) => {
+        hilog.error(DOMAIN_ID, LOG_TAG,
+          `[DEBUG] getToken error: ${err.message}`);
+      });
+      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] loginWithHuaweiAccount completed, navigating to GOAL_SETTING.');
+      this.router.replace(RouterKey.GOAL_SETTING);
+    }).catch((error: BusinessError) => {
+      hilog.error(DOMAIN_ID, LOG_TAG,
+        `[DEBUG] signIn error, Code: ${error.code}, Message: ${error.message}`);
+      // 用户取消不提示
+      if (error.code !== 2) {
+        AlertDialog.show({ message: `华为账号登录失败(${error.code})：${error.message}` });
+      }
+    });
+  }
+
+  /**
+   * 后端华为登录校验
+   * @param authorizationCode 华为授权码
+   * @returns Promise<HuaweiLoginResponse> 登录响应结果
+   */
+  async backLogin(authorizationCode: string | undefined): Promise<HuaweiLoginResponse> {
+    try {
+      // 参数校验
+      if (!authorizationCode || authorizationCode.trim() === '') {
+        throw new Error('授权码不能为空');
+      }
+      
+      // 构造请求对象
+      const request: HuaweiLoginRequest = new HuaweiLoginRequest(authorizationCode);
+      
+      // 调用后端接口
+      const response: HuaweiLoginResponse = await LibApi.huaweiLogin(request);
+      
+      // 响应结果校验
+      if (!response) {
+        throw new Error('后端响应为空');
+      }
+      
+      if (response.code === 200 && response.data) {
+        // 登录成功，保存用户信息和token
+        const userFromBackend = User.fromUserInfo(response.data.user);
+        this.currentUser = userFromBackend;
+        this.saveUserInfo(userFromBackend, userFromBackend.unionId, userFromBackend.openId, authorizationCode);
+
+        this.currentUser = response.data.user;
+        hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] 后端登录校验成功');
+        hilog.info(DOMAIN_ID, LOG_TAG, `[DEBUG] 用户ID: ${this.currentUser.id}`);
+        hilog.info(DOMAIN_ID, LOG_TAG, `[DEBUG] 用户名: ${this.currentUser.username}`);
+        hilog.info(DOMAIN_ID, LOG_TAG, `[DEBUG] 登录状态: ${this.currentUser.isLoggedIn}`);
+
+        return response;
+      } else {
+        // 登录失败
+        const errorMsg: string = response.message || '登录失败';
+        hilog.error(DOMAIN_ID, LOG_TAG, `[ERROR] 后端登录校验失败: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      hilog.error(DOMAIN_ID, LOG_TAG, `[ERROR] 后端登录校验异常: ${error.message}`);
+      throw new Error(error.message || '未知错误');
+    }
+  }
+
   // --- 登出 ---
   logout(): void {
+    auth.signOut().then(() => {
+      // 登出成功
+      hilog.info(DOMAIN_ID, LOG_TAG, '[DEBUG] logout success');
+    }).catch((error: BusinessError) => {
+      // 登出失败
+      hilog.error(DOMAIN_ID, LOG_TAG, '[DEBUG] logout failed - error: %{public}s', error.message);
+    });
     if (this.currentUser !== null) {
       this.currentUser.isLoggedIn = false;
     }

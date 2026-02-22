@@ -7,6 +7,8 @@
   "license": "Apache-2.0",
   "dependencies": {
     "lib_entity": "file:../lib_entity",
+    "lib_http": "file:../lib_http",
+    "lib_router": "file:../lib_router",
     "appscopecommon": "file:../../AppScopeCommon"
   }
 }
